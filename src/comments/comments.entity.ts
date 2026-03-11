@@ -15,6 +15,7 @@ export enum ModuleType {
   TASK = 'TASK',
   EVENT = 'EVENT',
   EVENT_ACTIVITY = 'EVENT_ACTIVITY',
+  ANNOUNCEMENT = 'ANNOUNCEMENT',
 }
 
 @Entity('comments')
@@ -22,19 +23,19 @@ export class Comment {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('text')
-  comment: string;
+  @Column({ type: 'text', nullable: true })
+  comment: string | null;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'uuid', nullable: true })
   auditor_id: string; // admin_id หรือ parent_id
 
-  @Column({ type: 'enum', enum: AuditorType })
-  auditor_type: AuditorType;
+  @Column({ type: 'enum', enum: AuditorType, nullable: true })
+  auditor_type: AuditorType | null;
 
-  @Column({ type: 'uuid' })
+  @Column({ type: 'uuid', nullable: true })
   module_id: string;
 
-  @Column({ type: 'enum', enum: ModuleType })
+  @Column({ type: 'enum', enum: ModuleType, nullable: true })
   module_type: ModuleType;
 
   @CreateDateColumn()

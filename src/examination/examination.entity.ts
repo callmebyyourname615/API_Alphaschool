@@ -7,41 +7,65 @@ import {
   UpdateDateColumn,
   JoinColumn,
 } from 'typeorm';
-import { Branch } from '../branch/branch.entity';
 import { Student } from '../students/student.entity';
-import { Admin } from '../admin/admin.entity';
 import { Subject } from '../subjects/subject.entity';
+import { Admin } from '../admins/admin.entity';
+import { Branch } from '../branches/branch.entity';
 
 @Entity('examinations')
 export class Examination {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Branch, { nullable: false })
+  // -----------------------------
+  // Branch relation
+  // -----------------------------
+  @ManyToOne(() => Branch, { nullable: true })
   @JoinColumn({ name: 'branch_id' })
   branch: Branch;
 
-  @Column()
-  academic_year: string;
+  // -----------------------------
+  // Academic year
+  // -----------------------------
+  @Column({ type: 'varchar', nullable: true })
+  academic_year: string | null;
 
-  @ManyToOne(() => Student, { nullable: false })
+  // -----------------------------
+  // Student relation
+  // -----------------------------
+  @ManyToOne(() => Student, { nullable: true })
   @JoinColumn({ name: 'student_id' })
   student: Student;
 
-  @ManyToOne(() => Subject, { nullable: false })
+  // -----------------------------
+  // Subject relation
+  // -----------------------------
+  @ManyToOne(() => Subject, { nullable: true })
   @JoinColumn({ name: 'subject_id' })
   subject: Subject;
 
+  // -----------------------------
+  // Admin relation (optional)
+  // -----------------------------
   @ManyToOne(() => Admin, { nullable: true })
   @JoinColumn({ name: 'admin_id' })
-  admin: Admin;
+  admin: Admin | null;
 
-  @Column({ type: 'int' })
-  score: number;
+  // -----------------------------
+  // Score (optional)
+  // -----------------------------
+  @Column({ type: 'int', nullable: true })
+  score: number | null;
 
-  @Column()
-  label: string;
+  // -----------------------------
+  // Label (optional)
+  // -----------------------------
+  @Column({ type: 'varchar', nullable: true })
+  label: string | null;
 
+  // -----------------------------
+  // Timestamps
+  // -----------------------------
   @CreateDateColumn()
   created_at: Date;
 

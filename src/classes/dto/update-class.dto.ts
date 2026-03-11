@@ -1,3 +1,27 @@
-import { PartialType } from '@nestjs/mapped-types';
-import { CreateClassDto } from './create-class.dto';
-export class UpdateClassDto extends PartialType(CreateClassDto) {}
+import { IsOptional, IsString, IsNumber, IsBoolean, IsUUID } from 'class-validator';
+
+export class UpdateClassDto {
+  @IsOptional()
+  @IsUUID()
+  branch_id?: string;
+
+  @IsOptional()
+  @IsUUID()
+  year_level_id?: string;
+
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @IsOptional()
+  @IsNumber()
+  saving_wallet?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  is_active?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  is_deleted?: boolean;
+}

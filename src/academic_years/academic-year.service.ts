@@ -1,47 +1,47 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { randomUUID } from 'crypto';
-import { AcademicYear } from './academic.entity';
-import { CreateAcademicYearDto } from './create-academic-year.dto';
-import { UpdateAcademicYearDto } from './update-academic-year.dto';
+import { AcademicYear } from './academic-year.entity';
+import { CreateAcademicYearDto } from './dto/create-academic-year.dto';
+import { UpdateAcademicYearDto } from './dto/update-academic-year.dto';
 
 @Injectable()
 export class AcademicYearService {
   constructor(
     @InjectRepository(AcademicYear)
-    private repo: Repository<AcademicYear>,
+    private readonly academicYearRepo: Repository<AcademicYear>,
   ) {}
 
-  async create(dto: CreateAcademicYearDto) {
-    const data = this.repo.create({
-      id: randomUUID(),
-      academic_year: dto.academic_year,
-      created_at: new Date(),
+  async create(dto: CreateAcademicYearDto): Promise<AcademicYear> {
+    const academicYear = this.academicYearRepo.create(dto);
+    return this.academicYearRepo.save(academicYear);
+  }
+
+  async findAll(): Promise<AcademicYear[]> {
+    return this.academicYearRepo.find({
+      where: { is_deleted: false },
+      order: { start_date: 'DESC' },
     });
-
-    return this.repo.save(data);
   }
 
-  async findAll() {
-    return this.repo.find({ where: { is_deleted: false } });
+  async findOne(id: string): Promise<AcademicYear> {
+    const academicYear = await this.academicYearRepo.findOne({
+      where: { id, is_deleted: false },
+    });
+    if (!academicYear) throw new NotFoundException('Academic year not found');
+    return academicYear;
   }
 
-  async findOne(id: string) {
-    const data = await this.repo.findOne({ where: { id, is_deleted: false } });
-    if (!data) throw new NotFoundException('Academic Year not found');
-    return data;
+  async update(id: string, dto: UpdateAcademicYearDto): Promise<AcademicYear> {
+    const academicYear = await this.findOne(id);
+    Object.assign(academicYear, dto);
+    return this.academicYearRepo.save(academicYear);
   }
 
-  async update(id: string, dto: UpdateAcademicYearDto) {
-    const data = await this.findOne(id);
-
-    const updated = {
-      ...data,
-      ...dto,
-      updated_at: new Date(),
-    };
-
-    return this.repo.save(updated);
+  async remove(id: string): Promise<{ message: string }> {
+    const academicYear = await this.findOne(id);
+    academicYear.is_deleted = true;
+    await this.academicYearRepo.save(academicYear);
+    return { message: 'Academic year deleted successfully' };
   }
 }

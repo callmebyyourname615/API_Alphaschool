@@ -7,10 +7,10 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Branch } from '../branch/branch.entity';
 
-import { AcademicYear } from '../academic_years/academic.entity';
 import { Appointment } from '../appointment/appointment.entity';
+import { Branch } from '../branches/branch.entity';
+import { AcademicYear } from '../academic_years/academic-year.entity';
 
 @Entity('appointment_persons')
 export class AppointmentPerson {
@@ -20,7 +20,7 @@ export class AppointmentPerson {
   // -----------------------------
   // Foreign Key: branch_id → branches.id
   // -----------------------------
-  @Column({ type: 'varchar', length: 100 })
+  @Column({ type: 'uuid' })
   branch_id: string;
 
   @ManyToOne(() => Branch, (branch) => branch.appointmentPersons, {
@@ -44,7 +44,7 @@ export class AppointmentPerson {
   // -----------------------------
   // Foreign Key: academic_year_id → academic_years.id
   // -----------------------------
-  @Column({ type: 'varchar', length: 36 })
+  @Column({ type: 'uuid' })
   academic_year_id: string;
 
   @ManyToOne(() => AcademicYear, (ay) => ay.appointmentPersons, {

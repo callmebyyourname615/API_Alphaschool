@@ -6,8 +6,8 @@ import { CreateAppointmentPersonDto } from './dto/create-appointment-person.dto'
 import { UpdateAppointmentPersonDto } from './dto/update-appointment-person.dto';
 import { randomUUID } from 'crypto';
 import { Appointment } from '../appointment/appointment.entity';
-import { Branch } from '../branch/branch.entity';
-import { AcademicYear } from '../academic_years/academic.entity';
+import { Branch } from '../branches/branch.entity';
+import { AcademicYear } from '../academic_years/academic-year.entity';
 
 @Injectable()
 export class AppointmentPersonService {

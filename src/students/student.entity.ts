@@ -10,16 +10,16 @@ import {
   OneToMany,
   JoinColumn,
 } from 'typeorm';
-import { Branch } from '../branch/branch.entity';
-import { AcademicYear } from '../academic_years/academic.entity';
 import { Province } from '../location/province.entity';
 import { District } from '../location/district.entity';
 import { Parent } from '../parents/parent.entity';
-import { Saving } from '../savings/savings.entity';
 import { Task } from '../task/task.entity';
 import { ParticipationScore } from '../participantion_score/participation-score.entity';
 import { Class } from '../classes/class.entity';
 import { Attendance } from '../attendance/attendance.entity';
+import { Branch } from '../branches/branch.entity';
+import { AcademicYear } from '../academic_years/academic-year.entity';
+import { Saving } from '../savings/savings.entity';
 
 @Entity('students')
 export class Student {

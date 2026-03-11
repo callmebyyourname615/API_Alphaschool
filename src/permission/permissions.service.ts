@@ -1,98 +1,165 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Permission } from './permission.entity';
+import { Role } from '../roles/role.entity';
+import { PermissionModule } from '../permission_modules/permission_module.entity';
 import { CreatePermissionDto } from './dto/create-permission.dto';
 import { UpdatePermissionDto } from './dto/update-permission.dto';
-import { Role } from '../role/role.entity';
-import { PermissionModule } from '../permission-module/permission_module.entity';
-import { Admin } from '../admin/admin.entity';
+import { PermissionResponseDto } from './dto/permission-response.dto';
 
 @Injectable()
 export class PermissionsService {
   constructor(
     @InjectRepository(Permission)
-    private repo: Repository<Permission>,
+    private permissionRepository: Repository<Permission>,
 
-    @InjectRepository(Role)
-    private roleRepo: Repository<Role>,
+@InjectRepository(Role)
+  private roleRepository: Repository<Role>,          // ← index [1]
 
-    @InjectRepository(PermissionModule)
-    private moduleRepo: Repository<PermissionModule>,
-
-    @InjectRepository(Admin)
-    private adminRepo: Repository<Admin>,
+  @InjectRepository(PermissionModule)
+  private moduleRepository: Repository<PermissionModule>,
   ) {}
 
-  // CREATE
-  async create(dto: CreatePermissionDto) {
-    const permission = new Permission();
+  async create(dto: CreatePermissionDto): Promise<PermissionResponseDto> {
+    const role = await this.roleRepository.findOneBy({ id: dto.role_id });
 
-    permission.role = await this.roleRepo.findOneByOrFail({ id: dto.role_id });
-    permission.permissionModule = await this.moduleRepo.findOneByOrFail({
-      id: dto.permission_module_id,
+    if (!role) {
+      throw new NotFoundException(`Role with ID ${dto.role_id} not found`);
+    }
+
+    let permissionModule: PermissionModule | null = null;
+
+    if (dto.moduleId) {
+      permissionModule = await this.moduleRepository.findOneBy({ id: dto.moduleId });
+      if (!permissionModule) {
+        throw new NotFoundException(`Module with ID ${dto.moduleId} not found`);
+      }
+    }
+
+    const permission = this.permissionRepository.create({
+      role,
+      permissionModule,
+      can_add: dto.can_add ?? false,
+      can_view: dto.can_view ?? false,
+      can_edit: dto.can_edit ?? false,
+      can_update_password: dto.can_update_password ?? false,
+      can_delete: dto.can_delete ?? false,
+      can_export: dto.can_export ?? false,
     });
-    permission.admin = await this.adminRepo.findOneByOrFail({
-      id: dto.admin_id,
-    });
 
-    permission.can_add = dto.can_add ?? false;
-    permission.can_view = dto.can_view ?? false;
-    permission.can_edit = dto.can_edit ?? false;
-    permission.can_update_password = dto.can_update_password ?? false;
-    permission.can_delete = dto.can_delete ?? false;
+    const saved = await this.permissionRepository.save(permission);
 
-    return this.repo.save(permission);
+    return this.toResponseDto(saved);
   }
 
-  // GET ALL
-  findAll() {
-    return this.repo.find({
-      relations: ['role', 'permissionModule', 'admin'],
+async findAll(): Promise<PermissionResponseDto[]> {
+  try {
+    const permissions = await this.permissionRepository.find({
+      relations: ['role', 'permissionModule'],
+      order: { createdAt: 'DESC' },
     });
-  }
 
-  // GET BY ID
-  async findById(id: string) {
-    const data = await this.repo.findOne({
+    console.log(`Found ${permissions.length} permissions`); // debug
+
+    return permissions.map((p) => this.toResponseDto(p));
+  } catch (error) {
+    console.error('Error in findAll:', error);
+    console.error('Stack:', error.stack);
+    throw error; // rethrow so Nest logs full error
+  }
+}
+  async findOne(id: string): Promise<PermissionResponseDto> {
+    const permission = await this.permissionRepository.findOne({
       where: { id },
-      relations: ['role', 'permissionModule', 'admin'],
+      relations: ['role', 'permissionModule'],
     });
-    if (!data) throw new NotFoundException('Permission not found');
-    return data;
+
+    if (!permission) {
+      throw new NotFoundException(`Permission with ID ${id} not found`);
+    }
+
+    return this.toResponseDto(permission);
   }
 
-  // UPDATE
-  async update(id: string, dto: UpdatePermissionDto) {
-    const permission = await this.findById(id);
+  async update(id: string, dto: UpdatePermissionDto): Promise<PermissionResponseDto> {
+    const permission = await this.permissionRepository.findOne({
+      where: { id },
+      relations: ['role', 'permissionModule'],
+    });
 
+    if (!permission) {
+      throw new NotFoundException(`Permission with ID ${id} not found`);
+    }
+
+    // Update role if provided
     if (dto.role_id) {
-      permission.role = await this.roleRepo.findOneByOrFail({
-        id: dto.role_id,
-      });
+      const role = await this.roleRepository.findOneBy({ id: dto.role_id });
+      if (!role) {
+        throw new NotFoundException(`Role with ID ${dto.role_id} not found`);
+      }
+      permission.role = role;
     }
 
-    if (dto.permission_module_id) {
-      permission.permissionModule = await this.moduleRepo.findOneByOrFail({
-        id: dto.permission_module_id,
-      });
+    // Update module (allow unsetting)
+    if (dto.moduleId !== undefined) {
+      if (dto.moduleId === null) {
+        permission.permissionModule = null;
+      } else {
+        const module = await this.moduleRepository.findOneBy({ id: dto.moduleId });
+        if (!module) {
+          throw new NotFoundException(`Module with ID ${dto.moduleId} not found`);
+        }
+        permission.permissionModule = module;
+      }
     }
 
-    if (dto.admin_id) {
-      permission.admin = await this.adminRepo.findOneByOrFail({
-        id: dto.admin_id,
-      });
+    // Update flags only if explicitly provided
+    if (dto.can_add !== undefined) permission.can_add = dto.can_add;
+    if (dto.can_view !== undefined) permission.can_view = dto.can_view;
+    if (dto.can_edit !== undefined) permission.can_edit = dto.can_edit;
+    if (dto.can_update_password !== undefined) {
+      permission.can_update_password = dto.can_update_password;
     }
+    if (dto.can_delete !== undefined) permission.can_delete = dto.can_delete;
+    if (dto.can_export !== undefined) permission.can_export = dto.can_export;
 
-    Object.assign(permission, dto);
+    const updated = await this.permissionRepository.save(permission);
 
-    return this.repo.save(permission);
+    return this.toResponseDto(updated);
   }
 
-  // DELETE
-  async delete(id: string) {
-    const result = await this.repo.delete(id);
-    if (result.affected === 0) throw new NotFoundException('Not found');
-    return { deleted: true };
+  async remove(id: string): Promise<{ message: string }> {
+    const result = await this.permissionRepository.delete(id);
+
+    if (result.affected === 0) {
+      throw new NotFoundException(`Permission with ID ${id} not found`);
+    }
+
+    return { message: 'Permission deleted successfully' };
   }
+
+  // ─── Helper ────────────────────────────────────────────────────────────────
+
+  private toResponseDto(permission: Permission): PermissionResponseDto {
+  return {
+    id: permission.id,
+    roleId: permission.role?.id ?? null,          // ← safe access + fallback
+    roleName: permission.role?.name ?? null,      // ← safe access + fallback
+    moduleId: permission.permissionModule?.id ?? null,
+    moduleName: permission.permissionModule?.name ?? null,
+    canCreate: permission.can_add,
+    canView: permission.can_view,
+    canUpdate: permission.can_edit,
+    canUpdatePassword: permission.can_update_password,
+    canDelete: permission.can_delete,
+    canExport: permission.can_export,
+    createdAt: permission.createdAt.toISOString(),
+    updatedAt: permission.updatedAt.toISOString(),
+  };
+}
 }

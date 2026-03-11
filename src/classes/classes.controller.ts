@@ -1,76 +1,35 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Delete,
-  Param,
-  Body,
-  Query,
-  NotFoundException,
-  HttpCode,
-  HttpStatus,
-  ParseUUIDPipe,
-} from '@nestjs/common';
+import { Controller, Post, Get, Put, Delete, Body, Param } from '@nestjs/common';
 import { ClassesService } from './classes.service';
 import { CreateClassDto } from './dto/create-class.dto';
 import { UpdateClassDto } from './dto/update-class.dto';
+import { Class } from './class.entity';
 
 @Controller('classes')
 export class ClassesController {
   constructor(private readonly service: ClassesService) {}
 
   @Post()
-  @HttpCode(HttpStatus.CREATED)
-  create(@Body() dto: CreateClassDto) {
+  create(@Body() dto: CreateClassDto): Promise<Class> {
     return this.service.create(dto);
   }
 
   @Get()
-  findAll(
-    @Query('branch_id') branchId?: string,
-    @Query('academic_year') academicYear?: string,
-    @Query('year_level_id') yearLevelId?: string,
-  ) {
-    if (yearLevelId) {
-      return this.service.findByYearLevel(yearLevelId);
-    }
-    if (branchId && academicYear) {
-      return this.service.findByBranchAndYear(branchId, academicYear);
-    }
-    if (branchId) return this.service.findByBranch(branchId);
-    if (academicYear) return this.service.findByAcademicYear(academicYear);
-
+  findAll(): Promise<Class[]> {
     return this.service.findAll();
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string) {
-    const cls = await this.service.findOne(id);
-    if (!cls) throw new NotFoundException(`Class with ID ${id} not found`);
-    return cls;
+  findOne(@Param('id') id: string): Promise<Class | null> {
+    return this.service.findOne(id);
   }
 
   @Put(':id')
-  async update(@Param('id') id: string, @Body() dto: UpdateClassDto) {
-    const updated = await this.service.update(id, dto);
-    if (!updated) throw new NotFoundException(`Class with ID ${id} not found`);
-    return updated;
+  update(@Param('id') id: string, @Body() dto: UpdateClassDto): Promise<Class | null> {
+    return this.service.update(id, dto);
   }
 
   @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async softDelete(@Param('id') id: string) {
-    const deleted = await this.service.softDelete(id);
-    if (!deleted) throw new NotFoundException(`Class with ID ${id} not found`);
+  remove(@Param('id') id: string): Promise<void> {
+    return this.service.remove(id);
   }
-
-  @Post('by-class-id')
-async getByClassIdWithDetails(@Param('classId', ParseUUIDPipe) classId: string) {
-  const cls = await this.service.findOneWithRelations(classId);
-  if (!cls) {
-    throw new NotFoundException(`Class with ID ${classId} not found`);
-  }
-  return cls;
-}
 }

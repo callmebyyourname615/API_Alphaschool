@@ -3,10 +3,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Examination } from './examination.entity';
 import { ExaminationService } from './examination.service';
 import { ExaminationController } from './examination.controller';
-import { Branch } from '../branch/branch.entity';
 import { Student } from '../students/student.entity';
 import { Subject } from '../subjects/subject.entity';
-import { Admin } from '../admin/admin.entity';
+import { Branch } from '../branches/branch.entity';
+import { Admin } from '../admins/admin.entity';
 
 @Module({
   imports: [

@@ -1,33 +1,24 @@
-import {
-  IsString,
-  IsNotEmpty,
-  IsBoolean,
-  IsOptional,
-  IsNumberString,
-} from 'class-validator';
+import { IsUUID, IsString, IsOptional, IsBoolean, IsNumber } from 'class-validator';
 
 export class CreateClassDto {
-  @IsString()
-  @IsNotEmpty()
+  @IsUUID()
   branch_id: string;
 
-  @IsString()
-  @IsNotEmpty()
-  academic_year: string;
-
-  @IsString()
-  @IsNotEmpty()
+  @IsUUID()
   year_level_id: string;
 
   @IsString()
-  @IsNotEmpty()
   name: string;
 
   @IsOptional()
-  @IsNumberString()
-  saving_wallet?: string = '0.00'; // numeric(18,2) → send as string or number
+  @IsNumber()
+  saving_wallet?: number;
 
   @IsOptional()
   @IsBoolean()
-  is_active?: boolean = true;
+  is_active?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  is_deleted?: boolean;
 }

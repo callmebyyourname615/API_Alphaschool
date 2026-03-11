@@ -2,95 +2,125 @@ import {
   Entity,
   Column,
   PrimaryGeneratedColumn,
-  ManyToOne,
-  JoinColumn,
+  ManyToMany,
+  JoinTable,
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Branch } from '../branch/branch.entity';
+import { Role } from '../roles/role.entity';
 
 @Entity('parents')
 export class Parent {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ length: 50 })
-  branch_id: string;
-
-  @ManyToOne(() => Branch, (branch) => branch.parents, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'branch_id' })
-  branch: Branch;
-
-  @Column({ length: 255, nullable: true })
-  username: string;
-
-  @Column({ length: 255, nullable: true })
-  password: string;
-
-  @Column({ length: 255, nullable: true })
+  // ────────────────────────────────────────────────
+  // Authentication fields – should NOT be stored as plain text!
+  // ────────────────────────────────────────────────
+  @Column({ length: 255, nullable: true, unique: true })
   email: string;
 
-  @Column({ type: 'date', nullable: true })
-  join_date: Date;
+  @Column({ length: 255, nullable: true, select: false }) // ← hide from queries by default
+  passwordHash: string; // ← renamed + important: NEVER store plain password
 
-  @Column({ length: 255 })
-  first_name: string;
+  @Column({ length: 100, nullable: true, unique: true })
+  username: string; // optional, but good to have unique if used for login
 
-  @Column({ length: 255 })
-  last_name: string;
-
-  @Column({ length: 50 })
-  phone: string;
-
-  @Column({ type: 'date' })
-  dob: Date;
-
-  @Column({ length: 50 })
-  gender: string;
+  // ────────────────────────────────────────────────
+  // Personal information
+  // ────────────────────────────────────────────────
+  @Column({ length: 100 })
+  firstName: string;
 
   @Column({ length: 100 })
+  lastName: string;
+
+  @Column({ type: 'date', nullable: true })
+  dateOfBirth: Date;
+
+  @Column({ length: 20 })
+  gender: string; // consider enum: 'male' | 'female' | 'other' | 'prefer_not_to_say'
+
+  @Column({ length: 100, nullable: true })
   nationality: string;
 
-  @Column({ length: 100 })
+  @Column({ length: 100, nullable: true })
   ethnicity: string;
 
-  @Column({ length: 100 })
+  @Column({ length: 100, nullable: true })
   religion: string;
 
-  @Column({ length: 255 })
+  // ────────────────────────────────────────────────
+  // Contact & Address
+  // ────────────────────────────────────────────────
+  @Column({ length: 20, nullable: true })
+  phone: string;
+
+  @Column({ length: 255, nullable: true })
   village: string;
 
-  @Column({ length: 255 })
+  @Column({ length: 255, nullable: true })
   district: string;
 
-  @Column({ length: 255 })
+  @Column({ length: 255, nullable: true })
   province: string;
 
   @Column({ type: 'text', nullable: true })
   address: string;
 
-  @Column({ length: 255 })
+  // ────────────────────────────────────────────────
+  // Occupation / Work
+  // ────────────────────────────────────────────────
+  @Column({ length: 255, nullable: true })
   occupation: string;
 
-  @Column({ length: 255 })
-  working_place: string;
-
-  // ✅ Add image columns
   @Column({ length: 255, nullable: true })
-  profile_pic: string;
+  workplace: string; // renamed for clarity
 
-  @Column({ length: 255, nullable: true })
-  id_card: string;
+  // ────────────────────────────────────────────────
+  // Documents / Media
+  // ────────────────────────────────────────────────
+  @Column({ length: 512, nullable: true })
+  profilePictureUrl: string;
 
+  @Column({ length: 512, nullable: true })
+  idCardUrl: string; // or idCardFrontUrl + idCardBackUrl if needed
+
+  // ────────────────────────────────────────────────
+  // Roles (Many-to-Many)
+  // ────────────────────────────────────────────────
+  @ManyToMany(() => Role, (role) => role.parents, { cascade: false })
+  @JoinTable({
+    name: 'parent_roles',
+    joinColumn: {
+      name: 'parent_id',
+      referencedColumnName: 'id',
+    },
+    inverseJoinColumn: {
+      name: 'role_id',
+      referencedColumnName: 'id',
+    },
+  })
+  roles: Role[];
+
+  // ────────────────────────────────────────────────
+  // Status & Timestamps
+  // ────────────────────────────────────────────────
   @Column({ default: true })
-  is_active: boolean;
+  isActive: boolean;
 
   @Column({ default: false })
-  is_deleted: boolean;
+  isDeleted: boolean; // ← for soft delete
 
   @CreateDateColumn({ type: 'timestamptz' })
-  created_at: Date;
+  createdAt: Date;
 
   @UpdateDateColumn({ type: 'timestamptz' })
-  updated_at: Date;
+  updatedAt: Date;
+
+  // Optional: if you want to track who created/updated (audit)
+  // @Column({ nullable: true })
+  // createdBy?: string;
+  // @Column({ nullable: true })
+  // updatedBy?: string;
 }

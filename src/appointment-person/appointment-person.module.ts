@@ -4,8 +4,8 @@ import { AppointmentPersonController } from './appointment-person.controller';
 import { AppointmentPersonService } from './appointment-person.service';
 import { AppointmentPerson } from './appointment-person.entity';
 import { Appointment } from '../appointment/appointment.entity';
-import { Branch } from '../branch/branch.entity';
-import { AcademicYear } from '../academic_years/academic.entity';
+import { Branch } from '../branches/branch.entity';
+import { AcademicYear } from '../academic_years/academic-year.entity';
 
 @Module({
   imports: [

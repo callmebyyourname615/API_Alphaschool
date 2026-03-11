@@ -7,7 +7,7 @@ export class CreatePermissionDto {
 
   @IsUUID()
   @IsNotEmpty()
-  permission_module_id: string;
+  moduleId: string;
 
   @IsUUID()
   @IsNotEmpty()
@@ -32,4 +32,8 @@ export class CreatePermissionDto {
   @IsOptional()
   @IsBoolean()
   can_delete?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  can_export?: boolean;
 }

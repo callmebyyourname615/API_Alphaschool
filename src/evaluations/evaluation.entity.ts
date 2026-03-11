@@ -1,10 +1,10 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { Subject } from '../subjects/subject.entity';
 import { Lesson } from '../lessons/lesson.entity';
-import { LessonInfo } from '../lesson_info/lesson-info.entity';
-import { Admin } from '../admin/admin.entity';
 import { Class } from '../classes/class.entity';
 import { Student } from '../students/student.entity';
+import { LessonInfo } from '../lesson-infos/lesson_info.entity';
+import { Admin } from '../admins/admin.entity';
 
 @Entity('evaluations')
 export class Evaluation {

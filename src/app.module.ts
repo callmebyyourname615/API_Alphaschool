@@ -1,43 +1,43 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { HealthController } from './health/health.controller';
 import { HealthModule } from './health/health.module';
+import { HealthController } from './health/health.controller';
+import { BranchModule } from './branches/branch.module';
 import { LoggerModule } from './common/logger.module';
 import { AcademicYearModule } from './academic_years/academic-year.module';
-import { BranchModule } from './branch/branch.module';
-import { YearLevelModule } from './year-level/year-level.module';
-import { AppointmentModule } from './appointment/appointment.module';
-import { ParentModule } from './parents/parent.module';
-import { LaocationModule } from './location/laocation.module';
-import { StudentModule } from './students/student.module';
-import { SavingsModule } from './savings/saving.module';
-import { AdminsModule } from './admin/admins.module';
-import { PermissionModulesModule } from './permission-module/permission-modules.module';
-import { PermissionsModule } from './permission/permissions.module';
-import { NotificationsModule } from './notifications/notifications.module';
-import { CommentsModule } from './comments/comments.module';
-import { RolesModule } from './role/role.module';
-import { FileModule } from './file/file.module';
-import { EventModule } from './event/event.module';
-import { TaskModule } from './task/task.module';
-import { EventActivityModule } from './eventactivity/eventActivity.module';
-import { AuthModule } from './auth/auth.module';
-import { SubjectsModule } from './subjects/subjects.module';
-import { LessonsModule } from './lessons/lessons.module';
-import { LessonInfoModule } from './lesson_info/lesson-info.module';
-import { HomeworkModule } from './homework/homework.module';
-import { EvaluationModule } from './evaluations/evaluation.module';
-import { ParticipationScoreModule } from './participantion_score/participation-score.module';
-import { PermissionModuleModule } from './permission_modules/permission-module.module';
-import { PermissionModule } from './permissions/permission.module';
-import { ExaminationModule } from './examination/examination.module';
 import { LevelsModule } from './levels/levels.module';
-import { TeachingModule } from './teaching/teaching.module';
-import { AppointmentPersonModule } from './appointment-person/appointment-person.module';
-import { ParticipationListModule } from './participantion_list/participation_list.module';
+import { YearLevelsModule } from './year_levels/year-levels.module';
 import { ClassesModule } from './classes/classes.module';
+import { SubjectsModule } from './subjects/subjects.module';
+import { AdminsModule } from './admins/admins.module';
+import { RolesModule } from './roles/roles.module';
+import { AuthModule } from './auth/auth.module';
+import { LaocationModule } from './location/laocation.module';
+import { PermissionsModule } from './permission/permissions.module';
+import { PermissionModuleModule } from './permission_modules/permission-module.module';
+import { ParentModule } from './parents/parent.module';
+import { TeachingsModule } from './teachings/teachings.module';
+import { LessonsModule } from './lessons/lessons.module';
+import { LessonInfosModule } from './lesson-infos/lesson-infos.module';
+import { HomeworkModule } from './homeworks/homework.module';
+import { TaskModule } from './task/task.module';
+import { EventModule } from './event/event.module';
+import { EventActivity } from './eventactivity/eventActivity.entity';
+import { FileModule } from './file/file.module';
+import { ParticipationScoreModule } from './participantion_score/participation-score.module';
+import { ParticipationListModule } from './participantion_list/participation_list.module';
 import { AttendanceModule } from './attendance/attendance.module';
+import { SavingsModule } from './savings/saving.module';
+import { StudentModule } from './students/student.module';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { AnnouncementsModule } from './announcements/announcements.module';
+import { EvaluationModule } from './evaluations/evaluation.module';
+import { AppointmentModule } from './appointment/appointment.module';
+import { AppointmentPersonModule } from './appointment-person/appointment-person.module';
+import { CommentsModule } from './comments/comments.module';
+import { ExaminationModule } from './examination/examination.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -59,44 +59,48 @@ import { AttendanceModule } from './attendance/attendance.module';
         synchronize: true,
       }),
     }),
+
+
     LoggerModule,
     HealthModule,
-    AcademicYearModule,
-    BranchModule,
-    YearLevelModule,
-    AppointmentModule,
-    ParentModule,
-    LaocationModule,
-    StudentModule,
-    RolesModule,
-    SavingsModule,
-    ParticipationScoreModule,
-    AdminsModule,
-    PermissionModulesModule,
-    PermissionsModule,
-    NotificationsModule,
-    CommentsModule,
-    FileModule,
-    EventModule,
-    TaskModule,
-    EventActivityModule,
     AuthModule,
+    BranchModule,
+    AcademicYearModule,
+    LevelsModule,
+    YearLevelsModule,
+    ClassesModule,
     SubjectsModule,
+    RolesModule,
+    AdminsModule,
+    LaocationModule,
+    PermissionsModule,
+    PermissionModuleModule,
+    ParentModule,
+    TeachingsModule,
     LessonsModule,
-    LessonInfoModule,
+    LessonInfosModule,
     HomeworkModule,
-    EvaluationModule,
+    TaskModule,
+    EventModule,
+    EventActivity,
+    FileModule,
     ParticipationListModule,
     ParticipationScoreModule,
-    PermissionModuleModule,
-    PermissionModule,
-    ExaminationModule,
-    LevelsModule,
-    TeachingModule,
-    AppointmentPersonModule,
-    ClassesModule,
+    SavingsModule,
     AttendanceModule,
+    StudentModule,
+    AnnouncementsModule,
+    EvaluationModule,
+    AppointmentModule,
+    AppointmentPersonModule,
+    CommentsModule,
+    ExaminationModule,
+    NotificationsModule,
+    
+
   ],
+  providers: [],
+  
   controllers: [HealthController],
 })
 export class AppModule {}

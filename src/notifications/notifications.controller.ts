@@ -5,6 +5,7 @@ import {
   Body,
   Param,
   Put,
+  Patch,
   Delete,
 } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
@@ -30,6 +31,16 @@ export class NotificationsController {
     return this.service.findByBranch(body);
   }
 
+  @Get('parent/:parentId')
+  findByParent(@Param('parentId') parentId: string) {
+    return this.service.findByParent(parentId);
+  }
+
+  @Get('student/:studentId')
+  findByStudent(@Param('studentId') studentId: string) {
+    return this.service.findByStudent(studentId);
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.service.findOne(id);
@@ -38,6 +49,16 @@ export class NotificationsController {
   @Put(':id')
   update(@Param('id') id: string, @Body() dto: UpdateNotificationDto) {
     return this.service.update(id, dto);
+  }
+
+  @Patch(':id/seen')
+  markSeen(@Param('id') id: string) {
+    return this.service.markSeen(id);
+  }
+
+  @Patch(':id/clicked')
+  markClicked(@Param('id') id: string) {
+    return this.service.markClicked(id);
   }
 
   @Delete(':id')

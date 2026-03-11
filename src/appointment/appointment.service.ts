@@ -2,11 +2,11 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, Repository } from 'typeorm';
 import { Appointment } from './appointment.entity';
-import { Branch } from '../branch/branch.entity';
-import { AcademicYear } from '../academic_years/academic.entity';
 import { CreateAppointmentDto } from './create-appointment.dto';
 import { UpdateAppointmentDto } from './update-appointment.dto';
 import { randomUUID } from 'crypto';
+import { Branch } from '../branches/branch.entity';
+import { AcademicYear } from '../academic_years/academic-year.entity';
 
 @Injectable()
 export class AppointmentService {

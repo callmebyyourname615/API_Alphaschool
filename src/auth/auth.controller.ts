@@ -10,8 +10,8 @@ export class AuthController {
     return this.authService.login(body.email, body.password);
   }
 
-  @Post('parent-login')
+ /* @Post('parent-login')
   async parentLogin(@Body() body: { email: string; password: string }) {
     return this.authService.loginParent(body.email, body.password);
-  }
+  }*/
 }

@@ -1,15 +1,20 @@
-import { IsNotEmpty, IsOptional, IsString, IsNumber } from 'class-validator';
+// src/lessons/dto/create-lesson.dto.ts
+import { IsString, IsNotEmpty, IsUUID, IsDateString, IsOptional } from 'class-validator';
 
 export class CreateLessonDto {
+  @IsUUID()
   @IsNotEmpty()
-  @IsNumber()
-  subject_id: number;
+  teachingId: string;
 
-  @IsNotEmpty()
   @IsString()
-  name: string;
+  @IsNotEmpty()
+  title: string;
 
+  @IsString()
   @IsOptional()
-  @IsString()
   description?: string;
+
+  @IsDateString()
+  @IsNotEmpty()
+  lessonDate: string; // will be parsed to Date
 }

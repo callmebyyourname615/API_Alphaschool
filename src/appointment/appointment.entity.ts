@@ -6,9 +6,9 @@ import {
   JoinColumn,
   OneToMany,
 } from 'typeorm';
-import { Branch } from '../branch/branch.entity';
-import { AcademicYear } from '../academic_years/academic.entity';
 import { AppointmentPerson } from '../appointment-person/appointment-person.entity';
+import { Branch } from '../branches/branch.entity';
+import { AcademicYear } from '../academic_years/academic-year.entity';
 
 @Entity('appointments')
 export class Appointment {
@@ -18,8 +18,8 @@ export class Appointment {
   // -----------------------------
   // Foreign Key: branch_id → branches.id
   // -----------------------------
-  @Column()
-  branch_id: string;
+ @Column({ type: 'uuid' })
+branch_id: string;
 
   @ManyToOne(() => Branch, (branch) => branch.appointments, {
     onDelete: 'CASCADE',

@@ -1,63 +1,47 @@
 import {
   Entity,
   Column,
-  PrimaryColumn,
-  ManyToOne,
-  JoinColumn,
+  PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
   OneToMany,
 } from 'typeorm';
-import { Branch } from '../branch/branch.entity';
-import { AcademicYear } from '../academic_years/academic.entity';
-import { YearLevel } from '../year-level/year-level.entity';
+import { Branch } from '../branches/branch.entity';
+import { YearLevel } from '../year_levels/year-level.entity';
 import { Saving } from '../savings/savings.entity';
-import { Teaching } from '../teaching/teaching.entity';
-import { Student } from '../students/student.entity';
 import { ParticipationList } from '../participantion_list/participation_list.entity';
 
 @Entity('classes')
 export class Class {
-  @PrimaryColumn({ type: 'varchar', length: 36 }) // ← better to use 36 too
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // ───────────────────────────────
-  // Foreign Keys
-  // ───────────────────────────────
-  @Column({ type: 'varchar', length: 36 })
+  @Column({ type: 'uuid' })
   branch_id: string;
 
-  @ManyToOne(() => Branch, (branch) => branch.classes, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Branch)
   @JoinColumn({ name: 'branch_id' })
   branch: Branch;
 
-  @Column({ type: 'varchar', length: 36 })
-  academic_year_id: string;
-
-  @ManyToOne(() => AcademicYear, (ay) => ay.classes, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'academic_year_id' })
-  academicYear: AcademicYear;
-
-  @Column({ type: 'varchar', length: 36 })
+  @Column({ type: 'uuid' })
   year_level_id: string;
 
-  @ManyToOne(() => YearLevel, (yl) => yl.classes, { onDelete: 'CASCADE' })
+  @ManyToOne(() => YearLevel)
   @JoinColumn({ name: 'year_level_id' })
   yearLevel: YearLevel;
 
-  // ───────────────────────────────
-  // Other columns (unchanged)
-  // ───────────────────────────────
-  @Column({ type: 'varchar', length: 255 })
+  @Column()
   name: string;
 
-  @Column({ type: 'decimal', precision: 18, scale: 2, default: 0 })
-  saving_wallet: string;
+  @Column({ type: 'numeric', default: 0 })
+  saving_wallet: number;
 
-  @Column({ type: 'boolean', default: true })
+  @Column({ default: true })
   is_active: boolean;
 
-  @Column({ type: 'boolean', default: false })
+  @Column({ default: false })
   is_deleted: boolean;
 
   @CreateDateColumn()
@@ -65,16 +49,8 @@ export class Class {
 
   @UpdateDateColumn()
   updated_at: Date;
-
-  // Relations (unchanged)
-  @OneToMany(() => Saving, (saving) => saving.branch)
+  @OneToMany(() => Saving, (saving) => saving.class)
   savings: Saving[];
-
-  @OneToMany(() => Teaching, (t) => t.teacher)
-  teachings: Teaching[];
-
-  @OneToMany(() => Student, (student) => student.classId)
-  students: Student[];
 
   @OneToMany(() => ParticipationList, (list) => list.classes)
   participationLists: ParticipationList[];

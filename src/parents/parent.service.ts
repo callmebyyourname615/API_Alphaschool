@@ -1,7 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, FindOptionsWhere } from 'typeorm';
 import { Parent } from './parent.entity';
+import * as bcrypt from 'bcrypt';
 import { CreateParentDto } from './dto/CreateParentDto';
 import { UpdateParentDto } from './dto/UpdateParentDto';
 
@@ -9,56 +14,111 @@ import { UpdateParentDto } from './dto/UpdateParentDto';
 export class ParentService {
   constructor(
     @InjectRepository(Parent)
-    private readonly repo: Repository<Parent>,
+    private readonly parentRepository: Repository<Parent>,
   ) {}
 
-  async create(dto: CreateParentDto, files?: Express.Multer.File[]): Promise<Parent> {
-    const parent = this.repo.create(dto);
+  async create(
+    dto: CreateParentDto,
+    files: Express.Multer.File[] = [],
+  ): Promise<Parent> {
+    let passwordHash: string | undefined;
 
-    if (files?.length) {
-      for (const file of files) {
-        if (file.fieldname === 'profile_pic') parent.profile_pic = file.path;
-        if (file.fieldname === 'id_card') parent.id_card = file.path;
-      }
+    if (dto.password) {
+      passwordHash = await bcrypt.hash(dto.password, 10);
     }
 
-    return this.repo.save(parent);
+    // Spread everything EXCEPT password
+    const { password, ...rest } = dto;
+
+    const parent = this.parentRepository.create({
+      ...rest,
+      passwordHash, // explicitly set the correct field
+    });
+
+    this.assignFilesToParent(parent, files);
+
+    return this.parentRepository.save(parent);
   }
 
-  async update(id: string, dto: UpdateParentDto, files?: Express.Multer.File[]): Promise<Parent> {
-    const parent = await this.repo.findOne({ where: { id } });
-    if (!parent) throw new NotFoundException('Parent not found');
+  async update(
+    id: string,
+    dto: UpdateParentDto,
+    files: Express.Multer.File[] = [],
+  ): Promise<Parent> {
+    const parent = await this.parentRepository.findOne({
+      where: { id },
+      relations: ['roles'], // optional – load if you need roles in response
+    });
 
-    Object.assign(parent, dto);
-
-    if (files?.length) {
-      for (const file of files) {
-        if (file.fieldname === 'profile_pic') parent.profile_pic = file.path;
-        if (file.fieldname === 'id_card') parent.id_card = file.path;
-      }
+    if (!parent) {
+      throw new NotFoundException(`Parent with ID ${id} not found`);
     }
 
-    return this.repo.save(parent);
+    // If password is being updated → hash it
+    if (dto.password) {
+      parent.passwordHash = await bcrypt.hash(dto.password, 10);
+      // do NOT set dto.password on entity
+    }
+
+    // Update other fields (exclude password from assign)
+    const { password, ...rest } = dto;
+    Object.assign(parent, rest);
+
+    // Handle new file uploads (overwrite existing)
+    this.assignFilesToParent(parent, files);
+
+    return this.parentRepository.save(parent);
   }
 
-  findAll(): Promise<Parent[]> {
-    return this.repo.find();
+  async findAll(): Promise<Parent[]> {
+    return this.parentRepository.find({
+      where: { isDeleted: false } as FindOptionsWhere<Parent>,
+      relations: ['roles'], // ← usually wanted in list
+      select: {
+        passwordHash: false, // never return password hash
+      },
+      order: { createdAt: 'DESC' },
+    });
   }
 
   async findOne(id: string): Promise<Parent> {
-    const parent = await this.repo.findOne({ where: { id } });
-    if (!parent) throw new NotFoundException('Parent not found');
+    const parent = await this.parentRepository.findOne({
+      where: { id, isDeleted: false },
+      relations: ['roles'],
+      select: {
+        passwordHash: false,
+      },
+    });
+
+    if (!parent) {
+      throw new NotFoundException(`Parent with ID ${id} not found`);
+    }
+
     return parent;
   }
 
-  findByBranch(branch_id: string): Promise<Parent[]> {
-    return this.repo.find({ where: { branch_id } });
+  async softDelete(id: string): Promise<{ message: string }> {
+    const parent = await this.findOne(id); // will throw if not found or deleted
+
+    parent.isDeleted = true;
+    parent.isActive = false; // optional – good practice
+
+    await this.parentRepository.save(parent);
+
+    return { message: 'Parent soft deleted successfully' };
   }
 
-  async softDelete(id: string): Promise<{ message: string }> {
-    const parent = await this.findOne(id);
-    parent.is_deleted = true;
-    await this.repo.save(parent);
-    return { message: 'Parent soft deleted' };
+  // ────────────────────────────────────────────────
+  // Helper: map multer files to correct entity fields
+  // ────────────────────────────────────────────────
+  private assignFilesToParent(parent: Parent, files: Express.Multer.File[]) {
+    for (const file of files) {
+      if (file.fieldname === 'profilePicture') {
+        parent.profilePictureUrl = file.path; // or `/uploads/${file.filename}`
+      }
+      if (file.fieldname === 'idCard') {
+        parent.idCardUrl = file.path;
+      }
+    }
   }
 }

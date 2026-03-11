@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { SubjectsService } from './subjects.service';
 import { SubjectsController } from './subjects.controller';
 import { Subject } from './subject.entity';
-import { Branch } from '../branch/branch.entity';
+import { Branch } from '../branches/branch.entity';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Subject, Branch])],

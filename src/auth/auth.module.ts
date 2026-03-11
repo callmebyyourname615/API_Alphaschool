@@ -1,14 +1,13 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Admin } from '../admin/admin.entity';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtModule } from '@nestjs/jwt';
-import { Parent } from '../parents/parent.entity';
+import { Admin } from '../admins/admin.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Admin, Parent]),
+    TypeOrmModule.forFeature([Admin]),
     JwtModule.register({
       secret: 'MY_SUPER_SECRET_KEY',
       signOptions: { expiresIn: '12h' },

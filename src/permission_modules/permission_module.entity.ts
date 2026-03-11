@@ -1,6 +1,6 @@
 // permission_module.entity.ts
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany } from 'typeorm';
-import { Permission } from '../permissions/permissions.entity';
+import { Permission } from '../permission/permission.entity';
 
 @Entity('permission_modules')
 export class PermissionModule {
@@ -13,6 +13,6 @@ export class PermissionModule {
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
   
-  @OneToMany(() => Permission, (permission) => permission.permission_module)
+  @OneToMany(() => Permission, (permission) => permission.permissionModule)
   permissions: Permission[];
 }

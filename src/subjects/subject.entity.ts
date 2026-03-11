@@ -1,41 +1,32 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
   Column,
-  ManyToOne,
-  JoinColumn,
+  PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
-  OneToMany,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
-import { Branch } from '../branch/branch.entity';
-import { Lesson } from '../lessons/lesson.entity';
-import { Teaching } from '../teaching/teaching.entity';
+import { Branch } from '../branches/branch.entity';
 
 @Entity('subjects')
 export class Subject {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @ManyToOne(() => Branch, (branch) => branch.subjects, {
-    nullable: false,
-    onDelete: 'RESTRICT', // หรือ CASCADE ตาม business
-  })
+  @Column()
+  name: string;
+
+  @Column({ type: 'uuid' })
+  branch_id: string;
+
+  @ManyToOne(() => Branch)
   @JoinColumn({ name: 'branch_id' })
   branch: Branch;
-
-  @Column({ length: 255 })
-  name: string;
 
   @CreateDateColumn()
   created_at: Date;
 
   @UpdateDateColumn()
   updated_at: Date;
-
-  @OneToMany(() => Lesson, (lesson) => lesson.subject)
-  lessons: Lesson[];
-
-  @OneToMany(() => Teaching, (t) => t.teacher)
-  teachings: Teaching[];
 }

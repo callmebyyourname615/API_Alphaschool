@@ -3,34 +3,29 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
+  JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
-  JoinColumn,
+  Index,
 } from 'typeorm';
-
-import { Role } from '../role/role.entity';
-import { PermissionModule } from '../permission-module/permission_module.entity';
-import { Admin } from '../admin/admin.entity';
+import { PermissionModule } from '../permission_modules/permission_module.entity';
+import { Role } from '../roles/role.entity';
 
 @Entity('permissions')
 export class Permission {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Role, { onDelete: 'SET NULL' })
+  @ManyToOne(() => Role, { nullable: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'role_id' })
-  role: Role;
+  role: Role;                       // ← must exist for relation
 
-  @ManyToOne(() => PermissionModule, { onDelete: 'SET NULL' })
+  @ManyToOne(() => PermissionModule, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'permission_module_id' })
-  permissionModule: PermissionModule;
-
-  @ManyToOne(() => Admin, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'admin_id' })
-  admin: Admin;
+  permissionModule: PermissionModule | null;
 
   @Column({ default: false })
-  can_add: boolean;
+  can_add: boolean;                 // ← must match exactly what you use
 
   @Column({ default: false })
   can_view: boolean;
@@ -43,6 +38,9 @@ export class Permission {
 
   @Column({ default: false })
   can_delete: boolean;
+
+  @Column({ default: false })
+  can_export: boolean;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

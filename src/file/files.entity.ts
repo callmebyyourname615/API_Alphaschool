@@ -28,6 +28,9 @@ export class File {
   @Column({ type: 'uuid', nullable: true })
   task_id?: string;
 
+  @Column({ type: 'uuid', nullable: true })
+  comment_id?: string;
+
   @Column({ length: 255 })
   file_path: string;
 

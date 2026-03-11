@@ -1,55 +1,79 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+// src/lessons/lessons.service.ts
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { Lesson } from './lesson.entity';
 import { CreateLessonDto } from './dto/create-lesson.dto';
 import { UpdateLessonDto } from './dto/update-lesson.dto';
-import { Subject } from '../subjects/subject.entity';
+import { Lesson } from './lesson.entity';
 
 @Injectable()
 export class LessonsService {
   constructor(
     @InjectRepository(Lesson)
-    private readonly lessonRepo: Repository<Lesson>,
-
-    @InjectRepository(Subject)
-    private readonly subjectRepo: Repository<Subject>,
+    private readonly lessonRepository: Repository<Lesson>,
   ) {}
 
-  async create(createDto: CreateLessonDto): Promise<Lesson> {
-    const subject = await this.subjectRepo.findOne({ where: { id: createDto.subject_id } });
-    if (!subject) throw new NotFoundException(`Subject with id ${createDto.subject_id} not found`);
+  async create(dto: CreateLessonDto): Promise<Lesson> {
+    const lesson = this.lessonRepository.create({
+      teaching: { id: dto.teachingId },
+      title: dto.title,
+      description: dto.description || null,
+      lessonDate: new Date(dto.lessonDate),
+    });
 
-    const lesson = this.lessonRepo.create({ ...createDto, subject });
-    return this.lessonRepo.save(lesson);
+    try {
+      return await this.lessonRepository.save(lesson);
+    } catch (error) {
+      if (error.code === '23503') {
+        throw new BadRequestException('The referenced teaching assignment does not exist');
+      }
+      throw error;
+    }
   }
 
-  findAll(): Promise<Lesson[]> {
-    return this.lessonRepo.find({ relations: ['subject'] });
+  async findAll(): Promise<Lesson[]> {
+    return this.lessonRepository.find({
+      relations: ['teaching', 'teaching.teacher', 'teaching.subject', 'teaching.class'],
+      order: { lessonDate: 'ASC', createdAt: 'DESC' },
+    });
   }
 
-  async findOne(id: number): Promise<Lesson> {
-    const lesson = await this.lessonRepo.findOne({ where: { id }, relations: ['subject'] });
-    if (!lesson) throw new NotFoundException(`Lesson with id ${id} not found`);
+  async findOne(id: string): Promise<Lesson> {
+    const lesson = await this.lessonRepository.findOne({
+      where: { id },
+      relations: ['teaching', 'teaching.teacher', 'teaching.subject', 'teaching.class'],
+    });
+
+    if (!lesson) {
+      throw new NotFoundException(`Lesson with ID ${id} not found`);
+    }
+
     return lesson;
   }
 
-  async update(id: number, updateDto: UpdateLessonDto): Promise<Lesson> {
-    const lesson = await this.findOne(id);
-
-    if (updateDto.subject_id) {
-      const subject = await this.subjectRepo.findOne({ where: { id: updateDto.subject_id } });
-      if (!subject) throw new NotFoundException(`Subject with id ${updateDto.subject_id} not found`);
-      lesson.subject = subject;
-      lesson.subject_id = subject.id;
-    }
-
-    Object.assign(lesson, updateDto);
-    return this.lessonRepo.save(lesson);
+  async findByTeaching(teachingId: string): Promise<Lesson[]> {
+    return this.lessonRepository.find({
+      where: { teaching: { id: teachingId } },
+      relations: ['teaching'],
+      order: { lessonDate: 'ASC' },
+    });
   }
 
-  async remove(id: number): Promise<void> {
+async update(id: string, dto: UpdateLessonDto): Promise<Lesson> {
+  const lesson = await this.lessonRepository.preload({
+    id,
+    ...dto,
+    lessonDate: dto.lessonDate ? new Date(dto.lessonDate) : undefined,
+  });
+
+  if (!lesson) throw new NotFoundException('Lesson not found');
+
+  return this.lessonRepository.save(lesson);
+}
+
+
+  async remove(id: string): Promise<void> {
     const lesson = await this.findOne(id);
-    await this.lessonRepo.remove(lesson);
+    await this.lessonRepository.remove(lesson);
   }
 }

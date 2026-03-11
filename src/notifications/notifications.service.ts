@@ -22,7 +22,8 @@ export class NotificationsService {
   async findAll() {
     return await this.repo.find({
       where: { is_deleted: false },
-      relations: ['branch', 'academic_year'],
+      relations: ['branch', 'academic_year', 'student', 'parent'],
+      order: { created_at: 'DESC' },
     });
   }
 
@@ -30,7 +31,7 @@ export class NotificationsService {
   async findOne(id: string) {
     const data = await this.repo.findOne({
       where: { id, is_deleted: false },
-      relations: ['branch', 'academic_year'],
+      relations: ['branch', 'academic_year', 'student', 'parent'],
     });
 
     if (!data) throw new NotFoundException('Notification not found');
@@ -55,7 +56,41 @@ export class NotificationsService {
   async findByBranch(body: { branch_id: string }) {
     return await this.repo.find({
       where: { branch_id: body.branch_id, is_deleted: false },
-      relations: ['branch', 'academic_year'],
+      relations: ['branch', 'academic_year', 'student', 'parent'],
+      order: { created_at: 'DESC' },
     });
+  }
+
+  // ================= GET BY PARENT =================
+  async findByParent(parentId: string) {
+    return await this.repo.find({
+      where: { parent_id: parentId, is_deleted: false },
+      relations: ['branch', 'academic_year', 'student', 'parent'],
+      order: { created_at: 'DESC' },
+    });
+  }
+
+  // ================= GET BY STUDENT =================
+  async findByStudent(studentId: string) {
+    return await this.repo.find({
+      where: { student_id: studentId, is_deleted: false },
+      relations: ['branch', 'academic_year', 'student', 'parent'],
+      order: { created_at: 'DESC' },
+    });
+  }
+
+  // ================= MARK SEEN =================
+  async markSeen(id: string) {
+    const data = await this.findOne(id);
+    data.seen = 1;
+    return await this.repo.save(data);
+  }
+
+  // ================= MARK CLICKED =================
+  async markClicked(id: string) {
+    const data = await this.findOne(id);
+    data.clicked = 1;
+    data.seen = 1;
+    return await this.repo.save(data);
   }
 }

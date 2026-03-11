@@ -1,61 +1,36 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Subject } from './subject.entity';
 import { CreateSubjectDto } from './dto/create-subject.dto';
-import { Branch } from '../branch/branch.entity';
+import { UpdateSubjectDto } from './dto/update-subject.dto';
 
 @Injectable()
 export class SubjectsService {
   constructor(
     @InjectRepository(Subject)
-    private subjectRepo: Repository<Subject>,
-
-    @InjectRepository(Branch)
-    private branchRepo: Repository<Branch>,
+    private readonly repo: Repository<Subject>,
   ) {}
 
-  async create(dto: CreateSubjectDto) {
-    const branch = await this.branchRepo.findOne({
-      where: {
-        branch_id: String(dto.branch_id), // ✅ แปลงเป็น string
-      },
-    });
-
-    if (!branch) {
-      throw new NotFoundException('Branch not found');
-    }
-
-    const subject = this.subjectRepo.create({
-      name: dto.name,
-      branch,
-    });
-
-    return this.subjectRepo.save(subject);
+  async create(dto: CreateSubjectDto): Promise<Subject> {
+    const entity = this.repo.create(dto);
+    return this.repo.save(entity);
   }
 
-  findAll() {
-    return this.subjectRepo.find({
-      relations: ['branch'],
-      order: { id: 'DESC' },
-    });
+  async findAll(): Promise<Subject[]> {
+    return this.repo.find({ relations: ['branch'] });
   }
 
-  async findOne(id: number) {
-    const subject = await this.subjectRepo.findOne({
-      where: { id },
-      relations: ['branch'],
-    });
-
-    if (!subject) {
-      throw new NotFoundException('Subject not found');
-    }
-
-    return subject;
+  async findOne(id: string): Promise<Subject | null> {
+    return this.repo.findOne({ where: { id }, relations: ['branch'] });
   }
 
-  async remove(id: number) {
-    const subject = await this.findOne(id);
-    return this.subjectRepo.remove(subject);
+  async update(id: string, dto: UpdateSubjectDto): Promise<Subject | null> {
+    await this.repo.update(id, dto);
+    return this.findOne(id);
+  }
+
+  async remove(id: string): Promise<void> {
+    await this.repo.delete(id);
   }
 }

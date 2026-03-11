@@ -6,10 +6,10 @@ export class Province {
   @PrimaryGeneratedColumn('uuid')
   id: string; // UUID will be automatically generated
 
-  @Column()
+  @Column({ nullable: true })
   nameEn: string;
 
-  @Column()
+  @Column({ nullable: true })
   nameLa: string;
 
   @OneToMany(() => District, (district) => district.province, { cascade: true })

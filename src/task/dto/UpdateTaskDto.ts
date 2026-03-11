@@ -1,5 +1,6 @@
 import { IsOptional, IsString, IsUUID, IsEnum, IsDateString } from 'class-validator';
-import * as CreateTaskDto from './CreateTaskDto';
+
+
 
 export class UpdateTaskDto {
   @IsOptional()
@@ -22,6 +23,4 @@ export class UpdateTaskDto {
   @IsUUID()
   added_by_id?: string;
 
-  @IsEnum(CreateTaskDto.AddedByTypes)
-    added_by_type: CreateTaskDto.AddedByType;
 }

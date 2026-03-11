@@ -4,10 +4,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCommentDto } from './dto/update-comment.dto';
 import { Comment, AuditorType, ModuleType } from './comments.entity';
-import { Admin } from '../admin/admin.entity';
 import { Parent } from '../parents/parent.entity';
 import { Task } from '../task/task.entity';
 import { EventActivity } from '../eventactivity/eventActivity.entity';
+import { File } from '../file/files.entity';
+import { Announcement } from '../announcements/announcement.entity';
+import { Admin } from '../admins/admin.entity';
 
 @Injectable()
 export class CommentsService {
@@ -29,6 +31,12 @@ export class CommentsService {
 
     @InjectRepository(EventActivity)
     private eventActivityRepo: Repository<EventActivity>,
+
+    @InjectRepository(File)
+    private fileRepo: Repository<File>,
+
+    @InjectRepository(Announcement)
+    private announcementRepo: Repository<Announcement>,
   ) {}
 
   // Create comment
@@ -52,6 +60,9 @@ export class CommentsService {
     } else if (dto.module_type === ModuleType.EVENT_ACTIVITY) {
       const activity = await this.eventActivityRepo.findOne({ where: { id: dto.module_id } as any });
       if (!activity) throw new NotFoundException('Event Activity not found');
+    } else if (dto.module_type === ModuleType.ANNOUNCEMENT) {
+      const announcement = await this.announcementRepo.findOne({ where: { id: dto.module_id } as any });
+      if (!announcement) throw new NotFoundException('Announcement not found');
     }
 
     // สร้าง comment
@@ -106,14 +117,25 @@ export class CommentsService {
       } else if (comment.auditor_type === AuditorType.PARENT) {
         auditor = await this.parentRepo.findOne({ 
           where: { id: comment.auditor_id },
-          select: ['id', 'first_name', 'last_name', 'profile_pic']
+          select: ['id', 'firstName', 'lastName', 'profilePictureUrl']
         });
       }
       return { ...comment, auditor };
     })
   );
 
-  return enrichedComments;
+  // Fetch images for each comment
+  const withImages = await Promise.all(
+    enrichedComments.map(async (comment) => {
+      const files = await this.fileRepo.find({
+        where: { comment_id: comment.id, is_deleted: false },
+      });
+      const images = files.map((f) => f.file_path);
+      return { ...comment, images };
+    })
+  );
+
+  return withImages;
 }
 
   async findOne(id: string) {

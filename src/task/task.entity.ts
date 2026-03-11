@@ -11,6 +11,7 @@ import {
 } from 'typeorm';
 import { File } from '../file/files.entity';
 import { Student } from '../students/student.entity';
+import { Homework } from '../homeworks/homework.entity';
 
 @Entity('tasks')
 export class Task {
@@ -48,4 +49,7 @@ export class Task {
 
   @UpdateDateColumn()
   updated_at: Date;
+
+  @ManyToOne(() => Homework, homework => homework.tasks, { nullable: false })
+  homework: Homework;
 }

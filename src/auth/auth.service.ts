@@ -1,10 +1,9 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { Admin } from '../admin/admin.entity';
 import { Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import * as bcrypt from 'bcryptjs';
 import { JwtService } from '@nestjs/jwt';
-import { Parent } from '../parents/parent.entity';
+import { Admin } from '../admins/admin.entity';
 
 @Injectable()
 export class AuthService {
@@ -12,38 +11,54 @@ export class AuthService {
     @InjectRepository(Admin)
     private adminRepo: Repository<Admin>,
 
-    @InjectRepository(Parent)
-    private parentRepo: Repository<Parent>,
+    //@InjectRepository(Parent)
+    // private parentRepo: Repository<Parent>,
     private jwtService: JwtService,
   ) {}
 
-  async login(email: string, password: string) {
-    const admin = await this.adminRepo.findOne({
-      where: { email, is_active: true, is_deleted: false },
-      relations: ['branch', 'role'],
-    });
+async login(email: string, password: string) {
+  const admin = await this.adminRepo.findOne({
+    where: {
+      email: email.trim().toLowerCase(),
+      is_active: true,
+      is_deleted: false,
+    },
+    relations: ['roles', 'branch'], // <-- include branch relation
+  });
 
-    if (!admin) throw new UnauthorizedException('Invalid email or password');
-
-    const isMatch = await bcrypt.compare(password, admin.password);
-    if (!isMatch) throw new UnauthorizedException('Invalid email or password');
-
-    const payload = {
-      id: admin.id,
-      username: admin.username,
-      email: admin.email,
-      branch: admin.branch,
-      role: admin.role,
-      admin_type: admin.admin_type,
-    };
-
-    return {
-      access_token: this.jwtService.sign(payload),
-      admin: payload,
-    };
+  if (!admin) {
+    throw new UnauthorizedException('Invalid email or password');
   }
 
-  async loginParent(email: string, password: string) {
+  if (!admin.password) {
+    throw new UnauthorizedException('No password set for this account');
+  }
+
+  const isPasswordValid = await bcrypt.compare(password, admin.password);
+  if (!isPasswordValid) {
+    throw new UnauthorizedException('Invalid email or password');
+  }
+
+  const payload = {
+    sub: admin.id,
+    username: admin.username,
+    email: admin.email,
+    roles: (admin.roles || []).map(r => ({
+      id: r.id,
+      name: r.name,
+      level: r.level,
+    })),
+    branch: admin.branch ? { id: admin.branch.id, name: admin.branch.name } : { id: '', name: 'Main Branch' }, // <-- add branch
+    user_type: 'admin',
+  };
+
+  return {
+    access_token: this.jwtService.sign(payload),
+    user: payload,
+  };
+}
+
+  /*  async loginParent(email: string, password: string) {
     const parent = await this.parentRepo.findOne({
       where: { email, is_active: true, is_deleted: false },
       relations: ['branch'],
@@ -77,7 +92,7 @@ export class AuthService {
       access_token: this.jwtService.sign(payload, { expiresIn: '12h' }),
       parent: payload,
     };
-  }
+  }*/
 
   async hashPassword(password: string) {
     return bcrypt.hash(password, 10);

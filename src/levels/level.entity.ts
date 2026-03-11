@@ -1,29 +1,16 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToOne,
-  CreateDateColumn,
-  UpdateDateColumn,
-  JoinColumn,
-} from 'typeorm';
-import { Branch } from '../branch/branch.entity';
+import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('levels')
 export class Level {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Branch, (branch) => branch.levels, { nullable: false })
-  @JoinColumn({ name: 'branch_id' })
-  branch: Branch;
-
-  @Column()
+  @Column({ unique: true })
   name: string;
 
-  @CreateDateColumn({ name: 'created_at' })
+  @CreateDateColumn()
   created_at: Date;
 
-  @UpdateDateColumn({ name: 'updated_at' })
+  @UpdateDateColumn()
   updated_at: Date;
 }

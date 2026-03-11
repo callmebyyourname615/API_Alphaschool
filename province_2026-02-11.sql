@@ -1,0 +1,20 @@
+INSERT INTO public.province (id, "nameEn", "nameLa")
+VALUES
+('5f61495b-e66a-4c43-af09-2b59f9f5c0b3', 'Vientiane Prefecture', 'ນະຄອນຫຼວງວຽງຈັນ'),
+('61dd1433-a85f-4887-8611-ccacfc810ea8', 'Phongsaly', 'ຜົ້ງສາລີ'),
+('80b422d2-e3d1-4df3-8d9f-2b29a95b737b', 'Luang Namtha', 'ຫຼວງນໍ້າທາ'),
+('6c197d4d-2c8f-4bcd-8a89-a407027c1df8', 'Oudomxay', 'ອຸດົມໄຊ'),
+('c250df12-1553-4c86-a2bd-8783a806b348', 'Bokeo', 'ບໍ່ແກ້ວ'),
+('37ceafff-1d07-4ac2-9c76-1f2a3fdf8c76', 'Luang Prabang', 'ຫຼວງພະບາງ'),
+('0c2c0dcf-5abb-4d98-8b16-4b849563c509', 'Houaphanh', 'ຫົວພັນ'),
+('137e84fc-5ac3-44aa-b6f0-4fd029e2c55f', 'Sainyabuli', 'ໄຊຍະບູລີ'),
+('5ee6adde-feae-4e9d-98a3-bfae3a3d3de8', 'Xiangkhouang', 'ຊຽງຂວາງ'),
+('4b5a9bb7-3ff8-4e0b-8434-c36873165581', 'Vientiane', 'ວຽງຈັນ'),
+('ea1bd5e8-4c8b-4661-97da-efd4671bdcbb', 'Bolikhamxai', 'ບໍລິຄຳໄຊ'),
+('f59e8ac5-0acd-4684-8df2-dac33181977e', 'Khammouane', 'ຄຳມ່ວນ'),
+('03d2feb6-43f5-4ec0-a194-5a11de665c02', 'Savannakhet', 'ສະຫວັນນະເຂດ'),
+('d23a3dd1-6410-46c7-9cd1-e06e3faab70b', 'Salavan', 'ສາລະວັນ'),
+('bc54bdcf-3a99-43db-8f93-47295ce381b5', 'Sekong', 'ເຊກອງ'),
+('2c20b840-b659-4108-acbd-ac665a15da0f', 'Champasak', 'ຈຳປາສັກ'),
+('64b762eb-dd29-4936-bde3-e932cba52170', 'Attapeu', 'ອັດຕະປື'),
+('5d31d8fc-d2f5-409f-a036-4c460c98ee94', 'Xaisomboun', 'ໄຊສົມບູນ');

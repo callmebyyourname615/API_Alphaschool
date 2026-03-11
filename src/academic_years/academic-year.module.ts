@@ -1,15 +1,12 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-
-import { AcademicYearController } from './academic-year.controller';
+import { AcademicYear } from './academic-year.entity';
 import { AcademicYearService } from './academic-year.service';
-import { AcademicYear } from './academic.entity';
+import { AcademicYearController } from './academic-year.controller';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([AcademicYear]), // Register Entity
-  ],
-  controllers: [AcademicYearController],
+  imports: [TypeOrmModule.forFeature([AcademicYear])],
   providers: [AcademicYearService],
+  controllers: [AcademicYearController],
 })
 export class AcademicYearModule {}

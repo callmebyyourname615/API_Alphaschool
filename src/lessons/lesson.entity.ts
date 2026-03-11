@@ -1,31 +1,47 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn, OneToMany } from 'typeorm';
-import { Subject } from '../subjects/subject.entity';
-import { LessonInfo } from '../lesson_info/lesson-info.entity';
+// src/lessons/entities/lesson.entity.ts
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  CreateDateColumn,
+  OneToMany,
+} from 'typeorm';
+import { Teaching } from '../teachings/teaching.entity';
+import { LessonInfo } from '../lesson-infos/lesson_info.entity';
+import { Homework } from '../homeworks/homework.entity';
 
 @Entity('lessons')
 export class Lesson {
-  @PrimaryGeneratedColumn()
-  id: number;
+  @PrimaryGeneratedColumn('uuid')
+  id: string;
 
-  @Column()
-  subject_id: number;
+  @Column({ type: 'uuid', name: 'teaching_id' })
+  teachingId!: string; // ← add this
 
-  @ManyToOne(() => Subject, (subject) => subject.lessons, { eager: true })
-  @JoinColumn({ name: 'subject_id' })
-  subject: Subject;
+  @ManyToOne(() => Teaching, (teaching) => teaching.lessons, {
+    nullable: false,
+    onDelete: 'CASCADE', // or 'RESTRICT'
+  })
+  @JoinColumn({ name: 'teaching_id' })
+  teaching: Teaching;
 
-  @Column()
-  name: string;
+  @Column({ length: 255 })
+  title: string;
 
   @Column({ type: 'text', nullable: true })
-  description: string;
+  description: string | null;
 
-  @CreateDateColumn({ type: 'timestamp' })
-  created_at: Date;
+  @Column({ type: 'date' })
+  lessonDate: Date;
 
-  @UpdateDateColumn({ type: 'timestamp' })
-  updated_at: Date;
+  @CreateDateColumn({ type: 'timestamptz' })
+  createdAt: Date;
 
-    @OneToMany(() => LessonInfo, (lessonInfo) => lessonInfo.lesson)
-    lesson_infos: LessonInfo[];
+  @OneToMany(() => LessonInfo, (info) => info.lesson, { cascade: true })
+  infos: LessonInfo[];
+
+  @OneToMany(() => Homework, (homework) => homework.lesson)
+    homeworks: Homework[];
 }

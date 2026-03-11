@@ -1,19 +1,14 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ClassesController } from './classes.controller';
 import { ClassesService } from './classes.service';
+import { ClassesController } from './classes.controller';
 import { Class } from './class.entity';
-import { Branch } from '../branch/branch.entity';
+import { Branch } from '../branches/branch.entity';
+import { YearLevel } from '../year_levels/year-level.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Class, Branch])],
+  imports: [TypeOrmModule.forFeature([Class, Branch, YearLevel])],
   controllers: [ClassesController],
   providers: [ClassesService],
-  exports: [
-    ClassesService,
-    TypeOrmModule.forFeature([Class]),      // ← add this (or just TypeOrmModule)
-    // If you also need Branch repository in other modules later, add:
-    // TypeOrmModule.forFeature([Branch]),
-  ],
 })
 export class ClassesModule {}

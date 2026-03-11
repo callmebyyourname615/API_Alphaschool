@@ -3,9 +3,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Appointment } from './appointment.entity';
 import { AppointmentService } from './appointment.service';
 import { AppointmentController } from './appointment.controller';
-import { Branch } from '../branch/branch.entity';
-import { AcademicYear } from '../academic_years/academic.entity';
 import { AppointmentPerson } from '../appointment-person/appointment-person.entity';
+import { Branch } from '../branches/branch.entity';
+import { AcademicYear } from '../academic_years/academic-year.entity';
 
 @Module({
   imports: [

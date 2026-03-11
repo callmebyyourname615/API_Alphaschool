@@ -1,10 +1,9 @@
-import { IsNotEmpty, IsNumber, IsString } from 'class-validator';
+import { IsString, IsUUID } from 'class-validator';
 
 export class CreateSubjectDto {
-  @IsNumber()
-  branch_id: number;
-
   @IsString()
-  @IsNotEmpty()
   name: string;
+
+  @IsUUID()
+  branch_id: string;
 }

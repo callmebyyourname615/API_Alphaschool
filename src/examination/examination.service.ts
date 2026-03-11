@@ -4,10 +4,10 @@ import { Repository } from 'typeorm';
 import { Examination } from './examination.entity';
 import { CreateExaminationDto } from './dto/create-examination.dto';
 import { UpdateExaminationDto } from './dto/update-examination.dto';
-import { Branch } from '../branch/branch.entity';
 import { Student } from '../students/student.entity';
 import { Subject } from '../subjects/subject.entity';
-import { Admin } from '../admin/admin.entity';
+import { Branch } from '../branches/branch.entity';
+import { Admin } from '../admins/admin.entity';
 
 @Injectable()
 export class ExaminationService {
@@ -33,7 +33,7 @@ export class ExaminationService {
       where: { id: dto.student_id },
     });
     const subject = await this.subjectRepo.findOne({
-      where: { id: Number(dto.subject_id) },
+      where: { id: String(dto.subject_id) },
     });
 
     const admin = dto.admin_id
@@ -97,7 +97,7 @@ export class ExaminationService {
 
   if (dto.subject_id) {
     const subject = await this.subjectRepo.findOne({
-      where: { id: Number(dto.subject_id) }, // 🔥 subject = number
+      where: { id: String(dto.subject_id) }, // 🔥 subject = number
     });
     if (!subject) throw new NotFoundException('Subject not found');
     exam.subject = subject;

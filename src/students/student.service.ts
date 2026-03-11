@@ -3,11 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Student } from './student.entity';
 import { Parent } from '../parents/parent.entity';
-import { Branch } from '../branch/branch.entity';
-import { AcademicYear } from '../academic_years/academic.entity';
 import { Province } from '../location/province.entity';
 import { District } from '../location/district.entity';
 import { SearchStudentByClassDto } from './dto/search-students.dto';
+import { Branch } from '../branches/branch.entity';
+import { AcademicYear } from '../academic_years/academic-year.entity';
 
 @Injectable()
 export class StudentService {
