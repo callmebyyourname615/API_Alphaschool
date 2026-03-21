@@ -1,9 +1,29 @@
-import { IsString, IsUUID } from 'class-validator';
+import { IsString, IsUUID, IsOptional, IsInt } from 'class-validator';
 
 export class CreateSubjectDto {
-  @IsString()
-  name: string;
+  @IsUUID()
+  subject_type_id: string;
 
   @IsUUID()
-  branch_id: string;
+  class_id: string;
+
+    @IsUUID()
+  @IsOptional()
+  curriculum_id?: string; // ✅ add this
+
+  @IsOptional()
+  @IsString()
+  description?: string;
+
+  @IsOptional()
+  @IsString()
+  file_s?: string | null;
+
+  @IsOptional()
+  @IsString()
+  file_t?: string | null;
+
+  @IsOptional()
+  @IsString()
+  file_e?: string | null;
 }

@@ -1,9 +1,6 @@
 import { IsOptional, IsString, IsNumber, IsBoolean, IsUUID } from 'class-validator';
 
 export class UpdateClassDto {
-  @IsOptional()
-  @IsUUID()
-  branch_id?: string;
 
   @IsOptional()
   @IsUUID()

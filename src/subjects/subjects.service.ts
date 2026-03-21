@@ -1,36 +1,65 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+
 import { Subject } from './subject.entity';
 import { CreateSubjectDto } from './dto/create-subject.dto';
 import { UpdateSubjectDto } from './dto/update-subject.dto';
 
 @Injectable()
-export class SubjectsService {
+export class SubjectService {
+
   constructor(
     @InjectRepository(Subject)
-    private readonly repo: Repository<Subject>,
+    private readonly subjectRepo: Repository<Subject>,
   ) {}
 
   async create(dto: CreateSubjectDto): Promise<Subject> {
-    const entity = this.repo.create(dto);
-    return this.repo.save(entity);
+    const subject = this.subjectRepo.create(dto);
+    return await this.subjectRepo.save(subject);
   }
 
   async findAll(): Promise<Subject[]> {
-    return this.repo.find({ relations: ['branch'] });
+    return await this.subjectRepo.find({
+      relations: [
+        'curriculum',
+        'subjectType',
+        'class'
+      ],
+      order: { create_dt: 'DESC' },
+    });
   }
 
-  async findOne(id: string): Promise<Subject | null> {
-    return this.repo.findOne({ where: { id }, relations: ['branch'] });
+  async findOne(id: string): Promise<Subject> {
+    const subject = await this.subjectRepo.findOne({
+      where: { id },
+      relations: [
+        'curriculum',
+        'subjectType',
+        'class'
+      ],
+    });
+
+    if (!subject) {
+      throw new NotFoundException(`Subject ${id} not found`);
+    }
+
+    return subject;
   }
 
-  async update(id: string, dto: UpdateSubjectDto): Promise<Subject | null> {
-    await this.repo.update(id, dto);
-    return this.findOne(id);
+  async update(id: string, dto: UpdateSubjectDto): Promise<Subject> {
+    const subject = await this.findOne(id);
+
+    Object.assign(subject, dto);
+
+    return await this.subjectRepo.save(subject);
   }
 
-  async remove(id: string): Promise<void> {
-    await this.repo.delete(id);
+  async remove(id: string): Promise<{ message: string }> {
+    const subject = await this.findOne(id);
+
+    await this.subjectRepo.remove(subject);
+
+    return { message: 'Subject deleted successfully' };
   }
 }

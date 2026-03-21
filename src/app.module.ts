@@ -9,7 +9,7 @@ import { AcademicYearModule } from './academic_years/academic-year.module';
 import { LevelsModule } from './levels/levels.module';
 import { YearLevelsModule } from './year_levels/year-levels.module';
 import { ClassesModule } from './classes/classes.module';
-import { SubjectsModule } from './subjects/subjects.module';
+import { SubjectModule } from './subjects/subjects.module';
 import { AdminsModule } from './admins/admins.module';
 import { RolesModule } from './roles/roles.module';
 import { AuthModule } from './auth/auth.module';
@@ -38,6 +38,8 @@ import { AppointmentPersonModule } from './appointment-person/appointment-person
 import { CommentsModule } from './comments/comments.module';
 import { ExaminationModule } from './examination/examination.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { SubjectTypeModule } from './subject_types/subject-type.module';
+import { CurriculumModule } from './curriculums/curriculum.module';
 
 @Module({
   imports: [
@@ -69,7 +71,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     LevelsModule,
     YearLevelsModule,
     ClassesModule,
-    SubjectsModule,
+    SubjectModule,
     RolesModule,
     AdminsModule,
     LaocationModule,
@@ -96,8 +98,8 @@ import { NotificationsModule } from './notifications/notifications.module';
     CommentsModule,
     ExaminationModule,
     NotificationsModule,
-    
-
+    SubjectTypeModule,
+    CurriculumModule,
   ],
   providers: [],
   

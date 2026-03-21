@@ -19,13 +19,6 @@ export class Class {
   id: string;
 
   @Column({ type: 'uuid' })
-  branch_id: string;
-
-  @ManyToOne(() => Branch)
-  @JoinColumn({ name: 'branch_id' })
-  branch: Branch;
-
-  @Column({ type: 'uuid' })
   year_level_id: string;
 
   @ManyToOne(() => YearLevel)

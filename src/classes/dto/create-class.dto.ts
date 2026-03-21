@@ -1,8 +1,6 @@
 import { IsUUID, IsString, IsOptional, IsBoolean, IsNumber } from 'class-validator';
 
 export class CreateClassDto {
-  @IsUUID()
-  branch_id: string;
 
   @IsUUID()
   year_level_id: string;

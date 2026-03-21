@@ -5,14 +5,19 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  ManyToMany,
+  JoinTable,
 } from 'typeorm';
+
 import { Homework } from '../homeworks/homework.entity';
 import { Saving } from '../savings/savings.entity';
 import { Appointment } from '../appointment/appointment.entity';
 import { AppointmentPerson } from '../appointment-person/appointment-person.entity';
+import { Subject } from '../subjects/subject.entity';
 
 @Entity('branches')
 export class Branch {
+
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
@@ -46,6 +51,21 @@ export class Branch {
   @UpdateDateColumn()
   updated_at: Date;
 
+  // 🔥 Assign Subjects to Branch
+  @ManyToMany(() => Subject)
+  @JoinTable({
+    name: 'branch_subjects',
+    joinColumn: {
+      name: 'branch_id',
+      referencedColumnName: 'id',
+    },
+    inverseJoinColumn: {
+      name: 'subject_id',
+      referencedColumnName: 'id',
+    },
+  })
+  subjects: Subject[];
+
   @OneToMany(() => Homework, (homework) => homework.branch)
   homeworks: Homework[];
 
@@ -54,6 +74,8 @@ export class Branch {
 
   @OneToMany(() => Appointment, (a) => a.branch)
   appointments: Appointment[];
+
   @OneToMany(() => AppointmentPerson, (ap) => ap.branch)
   appointmentPersons: AppointmentPerson[];
+
 }

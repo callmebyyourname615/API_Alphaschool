@@ -18,11 +18,11 @@ export class ClassesService {
   }
 
   async findAll(): Promise<Class[]> {
-    return this.repo.find({ relations: ['branch', 'yearLevel'] });
+    return this.repo.find({ relations: ['yearLevel'] });
   }
 
   async findOne(id: string): Promise<Class | null> {
-    return this.repo.findOne({ where: { id }, relations: ['branch', 'yearLevel'] });
+    return this.repo.findOne({ where: { id }, relations: ['yearLevel'] });
   }
 
   async update(id: string, dto: UpdateClassDto): Promise<Class | null> {

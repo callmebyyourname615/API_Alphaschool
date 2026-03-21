@@ -107,11 +107,11 @@ export class AdminsService {
     }
 
     // Assign branch
-    if (dto.branch_id) {
-      const branch = await this.branchRepository.findOneBy({ id: dto.branch_id });
-      if (!branch) throw new BadRequestException('Invalid branch ID');
-      admin.branch = branch;
-    }
+    //if (dto.branch_id) {
+   //   const branch = await this.branchRepository.findOneBy({ id: dto.branch_id });
+   //   if (!branch) throw new BadRequestException('Invalid branch ID');
+   //   admin.branch = branch;
+   // }
 
     const saved = await this.adminRepository.save(admin);
     return this.toResponseDto(saved);
