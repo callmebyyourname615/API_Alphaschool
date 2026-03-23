@@ -9,6 +9,7 @@ import { Parent } from './parent.entity';
 import * as bcrypt from 'bcrypt';
 import { CreateParentDto } from './dto/CreateParentDto';
 import { UpdateParentDto } from './dto/UpdateParentDto';
+// Service updated with field mapping
 
 @Injectable()
 export class ParentService {
@@ -27,12 +28,28 @@ export class ParentService {
       passwordHash = await bcrypt.hash(dto.password, 10);
     }
 
-    // Spread everything EXCEPT password
-    const { password, ...rest } = dto;
-
+    // Map DTO snake_case fields to entity camelCase fields
     const parent = this.parentRepository.create({
-      ...rest,
-      passwordHash, // explicitly set the correct field
+      email: dto.email,
+      username: dto.username,
+      passwordHash,
+      firstName: dto.first_name,
+      lastName: dto.last_name,
+      dateOfBirth: dto.dob,
+      gender: dto.gender,
+      nationality: dto.nationality,
+      ethnicity: dto.ethnicity,
+      religion: dto.religion,
+      phone: dto.phone,
+      village: dto.village,
+      district: dto.district,
+      province: dto.province,
+      address: dto.address,
+      occupation: dto.occupation,
+      workplace: dto.working_place,
+      profilePictureUrl: dto.profile_pic,
+      idCardUrl: dto.id_card,
+      isActive: dto.is_active !== undefined ? dto.is_active : true,
     });
 
     this.assignFilesToParent(parent, files);
@@ -57,12 +74,28 @@ export class ParentService {
     // If password is being updated → hash it
     if (dto.password) {
       parent.passwordHash = await bcrypt.hash(dto.password, 10);
-      // do NOT set dto.password on entity
     }
 
-    // Update other fields (exclude password from assign)
-    const { password, ...rest } = dto;
-    Object.assign(parent, rest);
+    // Map DTO snake_case fields to entity camelCase fields
+    if (dto.first_name !== undefined) parent.firstName = dto.first_name;
+    if (dto.last_name !== undefined) parent.lastName = dto.last_name;
+    if (dto.dob !== undefined) parent.dateOfBirth = dto.dob;
+    if (dto.gender !== undefined) parent.gender = dto.gender;
+    if (dto.nationality !== undefined) parent.nationality = dto.nationality;
+    if (dto.ethnicity !== undefined) parent.ethnicity = dto.ethnicity;
+    if (dto.religion !== undefined) parent.religion = dto.religion;
+    if (dto.phone !== undefined) parent.phone = dto.phone;
+    if (dto.village !== undefined) parent.village = dto.village;
+    if (dto.district !== undefined) parent.district = dto.district;
+    if (dto.province !== undefined) parent.province = dto.province;
+    if (dto.address !== undefined) parent.address = dto.address;
+    if (dto.occupation !== undefined) parent.occupation = dto.occupation;
+    if (dto.working_place !== undefined) parent.workplace = dto.working_place;
+    if (dto.email !== undefined) parent.email = dto.email;
+    if (dto.username !== undefined) parent.username = dto.username;
+    if (dto.profile_pic !== undefined) parent.profilePictureUrl = dto.profile_pic;
+    if (dto.id_card !== undefined) parent.idCardUrl = dto.id_card;
+    if (dto.is_active !== undefined) parent.isActive = dto.is_active;
 
     // Handle new file uploads (overwrite existing)
     this.assignFilesToParent(parent, files);
@@ -113,10 +146,10 @@ export class ParentService {
   // ────────────────────────────────────────────────
   private assignFilesToParent(parent: Parent, files: Express.Multer.File[]) {
     for (const file of files) {
-      if (file.fieldname === 'profilePicture') {
-        parent.profilePictureUrl = file.path; // or `/uploads/${file.filename}`
+      if (file.fieldname === 'profile_pic') {
+        parent.profilePictureUrl = file.path;
       }
-      if (file.fieldname === 'idCard') {
+      if (file.fieldname === 'id_card') {
         parent.idCardUrl = file.path;
       }
     }
