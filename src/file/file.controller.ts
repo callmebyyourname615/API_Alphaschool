@@ -89,7 +89,7 @@ export class FileController {
   )
   async upload(
     @UploadedFile() fileData: Express.Multer.File,
-    @Body() body: { module: 'event' | 'event_activity' | 'task'; ownerId: string },
+    @Body() body: { module: 'event' | 'event_activity' | 'task' | 'comment'; ownerId: string },
   ): Promise<File> {
     const { module, ownerId } = body;
     
@@ -112,13 +112,14 @@ export class FileController {
     };
     if (module === 'event') payload.event_id = ownerId;
     else if (module === 'event_activity') payload.event_activity_id = ownerId;
+    else if (module === 'comment') payload.comment_id = ownerId;
     else payload.task_id = ownerId;
     return this.fileService.create(payload);
   }
 
   @Get('by/:module/:ownerId')
   findByModule(
-    @Param('module') module: 'event' | 'event_activity' | 'task',
+    @Param('module') module: 'event' | 'event_activity' | 'task' | 'comment',
     @Param('ownerId') ownerId: string,
   ): Promise<File[]> {
     return this.fileService.findByModuleAndOwner(module, ownerId);
