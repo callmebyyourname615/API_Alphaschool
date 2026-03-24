@@ -7,12 +7,14 @@ import {
   ManyToOne,
   JoinColumn,
   ManyToMany,
+  OneToMany,
 } from 'typeorm';
 
 import { Class } from '../classes/class.entity';
 import { SubjectType } from '../subject_types/subject-type.entity';
 import { Curriculum } from '../curriculums/curriculum.entity';
 import { Branch } from '../branches/branch.entity';
+import { SubjectEvaluation } from '../subject_evaluations/subject-evaluation.entity';
 
 @Entity('subjects')
 export class Subject {
@@ -43,15 +45,14 @@ export class Subject {
   @JoinColumn({ name: 'class_id' })
   class: Class;
 
-@Column({ type: 'text', nullable: true })
-file_s: string | null;
+  @Column({ type: 'text', nullable: true })
+  file_s: string | null;
 
-@Column({ type: 'text', nullable: true })
-file_t: string | null;
+  @Column({ type: 'text', nullable: true })
+  file_t: string | null;
 
-@Column({ type: 'text', nullable: true })
-file_e: string | null;
-
+  @Column({ type: 'text', nullable: true })
+  file_e: string | null;
 
   // Dates
   @CreateDateColumn({ name: 'create_dt' })
@@ -62,4 +63,7 @@ file_e: string | null;
 
   @ManyToMany(() => Branch, (branch) => branch.subjects)
   branches: Branch[];
+
+  @OneToMany(() => SubjectEvaluation, (evaluation) => evaluation.subject)
+  evaluations: SubjectEvaluation[];
 }

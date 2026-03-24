@@ -28,8 +28,12 @@ async function bootstrap() {
   const prefix = config.get<string>('API_PREFIX') ?? '/api';
   app.setGlobalPrefix(prefix);
   // Serve static uploads at /uploads
-  app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads' });
-
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    prefix: '/uploads/',
+  });
+  const uploadsPath = join(__dirname, '..', 'uploads');
+  console.log('Uploads path:', uploadsPath);
+  console.log('Uploads exists:', require('fs').existsSync(uploadsPath));
   // Optional: log all requests/responses
   app.useGlobalInterceptors(new LoggingInterceptor(logger));
 

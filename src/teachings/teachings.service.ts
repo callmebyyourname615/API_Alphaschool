@@ -1,5 +1,9 @@
 // src/teachings/teachings.service.ts
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateTeachingDto } from './dto/create-teaching.dto';
@@ -13,29 +17,30 @@ export class TeachingsService {
     private readonly teachingRepository: Repository<Teaching>,
   ) {}
 
-async create(dto: CreateTeachingDto): Promise<Teaching> {
-const teaching = this.teachingRepository.create({
-  adminId:        dto.adminId,
-  subjectId:      dto.subjectId,
-  classId:        dto.classId,
-  academicYearId: dto.academicYearId,
-  branchId:       dto.branchId,
-});
+  async create(dto: CreateTeachingDto): Promise<Teaching> {
+    const teaching = this.teachingRepository.create({
+      adminId: dto.adminId,
+      subjectId: dto.subjectId,
+      academicYearId: dto.academicYearId,
+      branchId: dto.branchId,
+    });
 
-  try {
-    return await this.teachingRepository.save(teaching);
-  } catch (error) {
-    if (error.code === '23505') {
-      throw new BadRequestException('This teaching assignment already exists (duplicate combination)');
+    try {
+      return await this.teachingRepository.save(teaching);
+    } catch (error) {
+      if (error.code === '23505') {
+        throw new BadRequestException(
+          'This teaching assignment already exists (duplicate combination)',
+        );
+      }
+      if (error.code === '23503') {
+        throw new BadRequestException(
+          'One of the referenced entities (teacher/subject/class/year/branch) does not exist',
+        );
+      }
+      throw error;
     }
-    if (error.code === '23503') {
-      throw new BadRequestException(
-        'One of the referenced entities (teacher/subject/class/year/branch) does not exist'
-      );
-    }
-    throw error;
   }
-}
 
   async findAll(): Promise<Teaching[]> {
     return this.teachingRepository.find({
@@ -51,7 +56,9 @@ const teaching = this.teachingRepository.create({
     });
 
     if (!teaching) {
-      throw new NotFoundException(`Teaching assignment with ID ${id} not found`);
+      throw new NotFoundException(
+        `Teaching assignment with ID ${id} not found`,
+      );
     }
 
     return teaching;
@@ -63,8 +70,9 @@ const teaching = this.teachingRepository.create({
     const updated = {
       teacher: dto.adminId ? { id: dto.adminId } : teaching.teacher,
       subject: dto.subjectId ? { id: dto.subjectId } : teaching.subject,
-      class: dto.classId ? { id: dto.classId } : teaching.class,
-      academicYear: dto.academicYearId ? { id: dto.academicYearId } : teaching.academicYear,
+      academicYear: dto.academicYearId
+        ? { id: dto.academicYearId }
+        : teaching.academicYear,
       branch: dto.branchId ? { id: dto.branchId } : teaching.branch,
     };
 
@@ -74,7 +82,9 @@ const teaching = this.teachingRepository.create({
       return await this.teachingRepository.save(teaching);
     } catch (error) {
       if (error.code === '23505') {
-        throw new BadRequestException('This teaching assignment already exists');
+        throw new BadRequestException(
+          'This teaching assignment already exists',
+        );
       }
       throw error;
     }

@@ -9,7 +9,6 @@ import {
   OneToMany,
 } from 'typeorm';
 import { Subject } from '../subjects/subject.entity';
-import { Class } from '../classes/class.entity';
 import { AcademicYear } from '../academic_years/academic-year.entity';
 import { Branch } from '../branches/branch.entity';
 import { Lesson } from '../lessons/lesson.entity';
@@ -17,7 +16,7 @@ import { Admin } from '../admins/admin.entity';
 import { Homework } from '../homeworks/homework.entity';
 
 @Entity('teaching')
-@Index(['adminId', 'subjectId', 'classId', 'academicYearId'], { unique: true })
+@Index(['adminId', 'subjectId', 'academicYearId'], { unique: true })
 export class Teaching {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -27,9 +26,6 @@ export class Teaching {
 
   @Column({ type: 'uuid', name: 'subject_id' })
   subjectId: string;
-
-  @Column({ type: 'uuid', name: 'class_id' })
-  classId: string;
 
   @Column({ type: 'uuid', name: 'academic_year_id' })
   academicYearId: string;
@@ -45,10 +41,6 @@ export class Teaching {
   @ManyToOne(() => Subject, { nullable: false, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'subject_id' })
   subject: Subject;
-
-  @ManyToOne(() => Class, { nullable: false, onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'class_id' })
-  class: Class;
 
   @ManyToOne(() => AcademicYear, { nullable: false, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'academic_year_id' })

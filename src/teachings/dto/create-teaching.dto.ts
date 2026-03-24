@@ -12,10 +12,6 @@ export class CreateTeachingDto {
 
   @IsUUID()
   @IsNotEmpty()
-  classId: string;
-
-  @IsUUID()
-  @IsNotEmpty()
   academicYearId: string;
 
   @IsUUID()

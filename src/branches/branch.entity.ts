@@ -7,6 +7,7 @@ import {
   OneToMany,
   ManyToMany,
   JoinTable,
+  JoinColumn,
 } from 'typeorm';
 
 import { Homework } from '../homeworks/homework.entity';
@@ -14,6 +15,8 @@ import { Saving } from '../savings/savings.entity';
 import { Appointment } from '../appointment/appointment.entity';
 import { AppointmentPerson } from '../appointment-person/appointment-person.entity';
 import { Subject } from '../subjects/subject.entity';
+import { ManyToOne } from 'typeorm/browser';
+import { AcademicYear } from '../academic_years/academic-year.entity';
 
 @Entity('branches')
 export class Branch {
@@ -77,5 +80,8 @@ export class Branch {
 
   @OneToMany(() => AppointmentPerson, (ap) => ap.branch)
   appointmentPersons: AppointmentPerson[];
+
+@OneToMany(() => AcademicYear, (ay) => ay.branch)
+academic_years: AcademicYear[];
 
 }

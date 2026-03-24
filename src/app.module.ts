@@ -40,6 +40,7 @@ import { ExaminationModule } from './examination/examination.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SubjectTypeModule } from './subject_types/subject-type.module';
 import { CurriculumModule } from './curriculums/curriculum.module';
+import { SubjectEvaluationModule } from './subject_evaluations/subject-evaluation.module';
 
 @Module({
   imports: [
@@ -100,6 +101,7 @@ import { CurriculumModule } from './curriculums/curriculum.module';
     NotificationsModule,
     SubjectTypeModule,
     CurriculumModule,
+    SubjectEvaluationModule,
   ],
   providers: [],
   
