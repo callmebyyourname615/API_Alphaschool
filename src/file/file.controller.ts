@@ -1,11 +1,18 @@
-import { Controller, Get, Post, Body, Param, UploadedFile, UseInterceptors, Res, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UploadedFile, UseInterceptors, Res, NotFoundException, BadRequestException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import * as fs from 'fs';
-import { join } from 'path';
+import { join, extname } from 'path';
 import type { Response } from 'express';
 import { FileService } from './file.service';
 import { File } from './files.entity';
+
+const ALLOWED_MIME_TYPES = [
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+  'video/mp4', 'video/webm',
+  'application/pdf',
+];
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
 @Controller('files')
 export class FileController {
@@ -74,7 +81,6 @@ export class FileController {
     FileInterceptor('file', {
       storage: diskStorage({
         destination: (req, file, cb) => {
-          // Initially save to temp folder, will be moved in the controller
           const tempDir = join(process.cwd(), 'uploads', 'temp');
           fs.mkdirSync(tempDir, { recursive: true });
           cb(null, tempDir);
@@ -85,6 +91,13 @@ export class FileController {
           cb(null, `${timestamp}_${safeName}`);
         },
       }),
+      limits: { fileSize: MAX_FILE_SIZE },
+      fileFilter: (req, file, cb) => {
+        if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+          return cb(new BadRequestException(`File type '${file.mimetype}' is not allowed. Allowed: ${ALLOWED_MIME_TYPES.join(', ')}`), false);
+        }
+        cb(null, true);
+      },
     }),
   )
   async upload(
