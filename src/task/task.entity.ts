@@ -27,6 +27,9 @@ export class Task {
   @Column({ length: 255, nullable: true })
   description?: string;
 
+  @Column({ length: 50, default: 'In-Process' })
+  status: string;
+
   // polymorphic user
   @Column({ type: 'uuid', nullable: true })
   added_by_id?: string;

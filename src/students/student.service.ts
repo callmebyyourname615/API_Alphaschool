@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Student } from './student.entity';
@@ -55,25 +55,25 @@ export class StudentService {
     const branch = await this.branchRepo.findOne({
       where: { id: data.branchId },
     });
-    if (!branch) throw new Error('Branch not found');
+    if (!branch) throw new NotFoundException('Branch not found');
     student.branch = branch;
 
     const academicYear = await this.academicYearRepo.findOne({
       where: { id: data.academicYearId },
     });
-    if (!academicYear) throw new Error('AcademicYear not found');
+    if (!academicYear) throw new NotFoundException('AcademicYear not found');
     student.academicYear = academicYear;
 
     const province = await this.provinceRepo.findOne({
       where: { id: data.provinceId },
     });
-    if (!province) throw new Error('Province not found');
+    if (!province) throw new NotFoundException('Province not found');
     student.province = province;
 
     const district = await this.districtRepo.findOne({
       where: { id: data.districtId },
     });
-    if (!district) throw new Error('District not found');
+    if (!district) throw new NotFoundException('District not found');
     student.district = district;
 
     // Parents
@@ -89,7 +89,9 @@ export class StudentService {
   // ================= GET ALL =================
   getAllStudents() {
     return this.studentRepo.find({
+      where: { is_deleted: false },
       relations: ['branch', 'academicYear', 'province', 'district', 'parents'],
+      order: { created_at: 'DESC' },
     });
   }
 
@@ -108,7 +110,7 @@ export class StudentService {
       relations: ['parents'],
     });
 
-    if (!student) throw new Error('Student not found');
+    if (!student) throw new NotFoundException('Student not found');
 
     // Update simple fields
     Object.assign(student, data);
@@ -118,7 +120,7 @@ export class StudentService {
       const branch = await this.branchRepo.findOne({
         where: { id: data.branchId },
       });
-      if (!branch) throw new Error('Branch not found');
+      if (!branch) throw new NotFoundException('Branch not found');
       student.branch = branch;
     }
 
@@ -126,7 +128,7 @@ export class StudentService {
       const academicYear = await this.academicYearRepo.findOne({
         where: { id: data.academicYearId },
       });
-      if (!academicYear) throw new Error('AcademicYear not found');
+      if (!academicYear) throw new NotFoundException('AcademicYear not found');
       student.academicYear = academicYear;
     }
 
@@ -134,7 +136,7 @@ export class StudentService {
       const province = await this.provinceRepo.findOne({
         where: { id: data.provinceId },
       });
-      if (!province) throw new Error('Province not found');
+      if (!province) throw new NotFoundException('Province not found');
       student.province = province;
     }
 
@@ -142,7 +144,7 @@ export class StudentService {
       const district = await this.districtRepo.findOne({
         where: { id: data.districtId },
       });
-      if (!district) throw new Error('District not found');
+      if (!district) throw new NotFoundException('District not found');
       student.district = district;
     }
 
@@ -155,11 +157,13 @@ export class StudentService {
     return this.studentRepo.save(student);
   }
 
-  // ================= DELETE =================
+  // ================= DELETE (Soft Delete) =================
   async deleteStudent(id: string) {
     const student = await this.studentRepo.findOne({ where: { id } });
-    if (!student) throw new Error('Student not found');
-    return this.studentRepo.remove(student);
+    if (!student) throw new NotFoundException('Student not found');
+    student.is_deleted = true;
+    student.is_active = false;
+    return this.studentRepo.save(student);
   }
 
   async getStudentsByClass(dto: SearchStudentByClassDto) {
@@ -201,7 +205,7 @@ export class StudentService {
 
       query.orderBy('student.first_name', 'ASC');
 
-      console.log(query.getSql()); // 🧪 debug (remove later)
+
 
       const students = await query.getMany();
 

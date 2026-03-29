@@ -8,6 +8,7 @@ import {
   Put,
   UploadedFiles,
   UseInterceptors,
+  BadRequestException,
 } from '@nestjs/common';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { TaskService } from './task.service';
@@ -33,6 +34,15 @@ export class TaskController {
           cb(null, filename);
         },
       }),
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB per file
+      fileFilter: (req, file, cb) => {
+        const allowed = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.doc', '.docx', '.mp4', '.webm'];
+        const ext = extname(file.originalname).toLowerCase();
+        if (!allowed.includes(ext)) {
+          return cb(new BadRequestException(`File type '${ext}' not allowed.`), false);
+        }
+        cb(null, true);
+      },
     }),
   )
   create(
@@ -63,7 +73,31 @@ export class TaskController {
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() data: UpdateTaskDto): Promise<Task> {
-    return this.taskService.update(id, data);
+  @UseInterceptors(
+    FilesInterceptor('files', 10, {
+      storage: diskStorage({
+        destination: './uploads/tasks',
+        filename: (req, file, cb) => {
+          const filename = `${randomUUID()}${extname(file.originalname)}`;
+          cb(null, filename);
+        },
+      }),
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB per file
+      fileFilter: (req, file, cb) => {
+        const allowed = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.pdf', '.doc', '.docx', '.mp4', '.webm'];
+        const ext = extname(file.originalname).toLowerCase();
+        if (!allowed.includes(ext)) {
+          return cb(new BadRequestException(`File type '${ext}' not allowed.`), false);
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  update(
+    @Param('id') id: string,
+    @Body() data: UpdateTaskDto,
+    @UploadedFiles() files: Express.Multer.File[],
+  ): Promise<Task> {
+    return this.taskService.update(id, data, files);
   }
 }
