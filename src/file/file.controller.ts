@@ -35,8 +35,15 @@ export class FileController {
     @Res() res: Response,
   ) {
     try {
+      // Validate module and filename to prevent path traversal
+      if (/[\/\\\.]{2,}/.test(module) || /[\/\\\.]{2,}/.test(filename)) {
+        throw new BadRequestException('Invalid file path');
+      }
+      const safeModule = module.replace(/[^a-zA-Z0-9_-]/g, '');
+      const safeFilename = filename.replace(/[^a-zA-Z0-9_.\-]/g, '');
+
       // Construct the full file path
-      const fullPath = join(process.cwd(), 'uploads', module, filename);
+      const fullPath = join(process.cwd(), 'uploads', safeModule, safeFilename);
 
       // Check if file exists
       if (!fs.existsSync(fullPath)) {
