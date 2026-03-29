@@ -32,8 +32,7 @@ export class BranchController {
     storage: diskStorage({
       destination: './uploads/branches',
       filename: (req, file, cb) => {
-        const uniqueSuffix =
-          Date.now() + '-' + Math.round(Math.random() * 1e9);
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
 
         const ext = extname(file.originalname).toLowerCase();
 
@@ -68,9 +67,20 @@ export class BranchController {
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(BranchController.fileInterceptor)
   async create(
-    @Body() dto: CreateBranchDto,
+    @Body() body: any, // ใช้ any เพื่อจับ multipart fields
     @UploadedFile() file?: Express.Multer.File,
   ): Promise<BranchResponseDto> {
+    // แปลง fields เป็น DTO
+    const dto: CreateBranchDto = {
+      branch_id: body.branch_id,
+      branch_no: body.branch_no,
+      name: body.name,
+      contact: body.contact,
+      phone: body.phone,
+      address: body.address ? JSON.parse(body.address) : undefined,
+      subjects: body.subjects ? JSON.parse(body.subjects) : undefined,
+    };
+
     return this.branchService.create(dto, file);
   }
 

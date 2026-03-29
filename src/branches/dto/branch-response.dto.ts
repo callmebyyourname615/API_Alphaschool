@@ -9,6 +9,9 @@ export class BranchResponseDto {
   branch_id: string;
 
   @ApiProperty()
+  branch_no: string;
+
+  @ApiProperty()
   name: string;
 
   @ApiProperty({ required: false, nullable: true })

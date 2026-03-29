@@ -1,4 +1,3 @@
-// src/teachings/teachings.service.ts
 import {
   Injectable,
   NotFoundException,
@@ -6,92 +5,90 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { Teaching } from './teaching.entity';
 import { CreateTeachingDto } from './dto/create-teaching.dto';
 import { UpdateTeachingDto } from './dto/update-teaching.dto';
-import { Teaching } from './teaching.entity';
 
 @Injectable()
-export class TeachingsService {
+export class TeachingService {
   constructor(
     @InjectRepository(Teaching)
-    private readonly teachingRepository: Repository<Teaching>,
+    private readonly teachingRepo: Repository<Teaching>,
   ) {}
 
-  async create(dto: CreateTeachingDto): Promise<Teaching> {
-    const teaching = this.teachingRepository.create({
-      adminId: dto.adminId,
-      subjectId: dto.subjectId,
-      academicYearId: dto.academicYearId,
-      branchId: dto.branchId,
+  // Create - Assign teacher to subject
+  async create(createDto: CreateTeachingDto): Promise<Teaching> {
+    const existing = await this.teachingRepo.findOne({
+      where: {
+        adminId: createDto.adminId,
+        subjectId: createDto.subjectId,
+        academicYearId: createDto.academicYearId,
+        branchId: createDto.branchId,
+      },
     });
 
-    try {
-      return await this.teachingRepository.save(teaching);
-    } catch (error) {
-      if (error.code === '23505') {
-        throw new BadRequestException(
-          'This teaching assignment already exists (duplicate combination)',
-        );
-      }
-      if (error.code === '23503') {
-        throw new BadRequestException(
-          'One of the referenced entities (teacher/subject/class/year/branch) does not exist',
-        );
-      }
-      throw error;
-    }
-  }
-
-  async findAll(): Promise<Teaching[]> {
-    return this.teachingRepository.find({
-      relations: ['teacher', 'subject', 'class', 'academicYear', 'branch'],
-      order: { createdAt: 'DESC' },
-    });
-  }
-
-  async findOne(id: string): Promise<Teaching> {
-    const teaching = await this.teachingRepository.findOne({
-      where: { id },
-      relations: ['teacher', 'subject', 'class', 'academicYear', 'branch'],
-    });
-
-    if (!teaching) {
-      throw new NotFoundException(
-        `Teaching assignment with ID ${id} not found`,
+    if (existing) {
+      throw new BadRequestException(
+        'This teacher is already assigned to this subject in the same academic year and branch',
       );
     }
 
-    return teaching;
+    const teaching = this.teachingRepo.create(createDto);
+    return await this.teachingRepo.save(teaching);
   }
 
-  async update(id: string, dto: UpdateTeachingDto): Promise<Teaching> {
-    const teaching = await this.findOne(id);
+  // Get all teachings with optional filters
+ async findAll(branchId?: string, academicYearId?: string) {
+  const query = this.teachingRepo
+    .createQueryBuilder('teaching')
+    .leftJoinAndSelect('teaching.teacher', 'teacher')
+    .leftJoinAndSelect('teaching.subject', 'subject')
+    .leftJoinAndSelect('teaching.academicYear', 'academicYear')
+    .leftJoinAndSelect('teaching.branch', 'branch')
+    .leftJoinAndSelect('subject.subjectType', 'subjectType')
+    .leftJoinAndSelect('subject.class', 'class'); // ← add this
 
-    const updated = {
-      teacher: dto.adminId ? { id: dto.adminId } : teaching.teacher,
-      subject: dto.subjectId ? { id: dto.subjectId } : teaching.subject,
-      academicYear: dto.academicYearId
-        ? { id: dto.academicYearId }
-        : teaching.academicYear,
-      branch: dto.branchId ? { id: dto.branchId } : teaching.branch,
-    };
-
-    Object.assign(teaching, updated);
-
-    try {
-      return await this.teachingRepository.save(teaching);
-    } catch (error) {
-      if (error.code === '23505') {
-        throw new BadRequestException(
-          'This teaching assignment already exists',
-        );
-      }
-      throw error;
-    }
+  if (branchId) {
+    query.andWhere('teaching.branchId = :branchId', { branchId });
+  }
+  if (academicYearId) {
+    query.andWhere('teaching.academicYearId = :academicYearId', { academicYearId });
   }
 
-  async remove(id: string): Promise<void> {
+  return query.orderBy('teaching.createdAt', 'DESC').getMany();
+}
+
+async findOne(id: string): Promise<Teaching> {
+  const teaching = await this.teachingRepo.findOne({
+    where: { id },
+    relations: [
+      'teacher',
+      'subject',
+      'subject.subjectType',
+      'subject.class',      // ← add this
+      'academicYear',
+      'branch',
+    ],
+  });
+
+  if (!teaching) {
+    throw new NotFoundException(`Teaching assignment with ID ${id} not found`);
+  }
+
+  return teaching;
+}
+
+  // Update
+  async update(id: string, updateDto: UpdateTeachingDto): Promise<Teaching> {
     const teaching = await this.findOne(id);
-    await this.teachingRepository.remove(teaching);
+    Object.assign(teaching, updateDto);
+    return await this.teachingRepo.save(teaching);
+  }
+
+  // Hard delete for now — add is_deleted column to entity for soft delete later
+  async remove(id: string): Promise<{ message: string }> {
+    const teaching = await this.findOne(id);
+    await this.teachingRepo.remove(teaching);
+    return { message: 'Teaching assignment deleted successfully' };
   }
 }

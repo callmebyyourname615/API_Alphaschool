@@ -17,15 +17,18 @@ import { AppointmentPerson } from '../appointment-person/appointment-person.enti
 import { Subject } from '../subjects/subject.entity';
 import { ManyToOne } from 'typeorm/browser';
 import { AcademicYear } from '../academic_years/academic-year.entity';
+import { Teaching } from '../teachings/teaching.entity';
 
 @Entity('branches')
 export class Branch {
-
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
   @Column({ nullable: false, unique: true })
   branch_id: string;
+
+  @Column({ nullable: true, unique: true })
+  branch_no: string;
 
   @Column({ nullable: true })
   name: string;
@@ -81,7 +84,9 @@ export class Branch {
   @OneToMany(() => AppointmentPerson, (ap) => ap.branch)
   appointmentPersons: AppointmentPerson[];
 
-@OneToMany(() => AcademicYear, (ay) => ay.branch)
-academic_years: AcademicYear[];
+  @OneToMany(() => AcademicYear, (ay) => ay.branch)
+  academic_years: AcademicYear[];
 
+  @OneToMany(() => Teaching, (teaching) => teaching.branch)
+  teachings: Teaching[];
 }

@@ -25,56 +25,90 @@ export class BranchService {
     dto: CreateBranchDto,
     file?: Express.Multer.File,
   ): Promise<Branch> {
-    // ✅ parse subjects (กันพังจาก FormData)
+    // 1️⃣ parse subjects
     let subjectIds: string[] = [];
-
     if (dto.subjects) {
-      if (typeof dto.subjects === 'string') {
-        const parsed = JSON.parse(dto.subjects);
-
-        if (Array.isArray(parsed)) {
-          if (typeof parsed[0] === 'object') {
-            subjectIds = parsed.map((s: any) => s.id);
-          } else {
-            subjectIds = parsed;
-          }
-        }
-      } else if (Array.isArray(dto.subjects)) {
-        if (typeof dto.subjects[0] === 'object') {
-          subjectIds = dto.subjects.map((s: any) => s.id); // ✅ FIX
-        } else {
-          subjectIds = dto.subjects;
-        }
+      const raw =
+        typeof dto.subjects === 'string'
+          ? JSON.parse(dto.subjects)
+          : dto.subjects;
+      if (Array.isArray(raw)) {
+        subjectIds = raw.map((s: any) => (typeof s === 'string' ? s : s.id));
       }
     }
 
-    // ✅ create branch
-    const branch = this.branchRepo.create({
-      branch_id: dto.branch_id,
-      name: dto.name,
-      address:
-        typeof dto.address === 'string' ? JSON.parse(dto.address) : dto.address,
-      contact: dto.contact,
-      phone: dto.phone,
+    // 2️⃣ check if branch_id exists in active rows
+    const activeById = await this.branchRepo.findOne({
+      where: { branch_id: dto.branch_id, is_deleted: false },
     });
-
-    // ✅ image
-    if (file) {
-      branch.profile_pic = `/uploads/branches/${file.filename}`;
+    if (activeById) {
+      throw new Error(`Branch ID "${dto.branch_id}" already exists`);
     }
 
-    // ✅ assign subjects
+    // 3️⃣ check if branch_no exists in active rows
+    const activeByNo = await this.branchRepo.findOne({
+      where: { branch_no: dto.branch_no, is_deleted: false },
+    });
+    if (activeByNo) {
+      throw new Error(`Branch number "${dto.branch_no}" already exists`);
+    }
+
+    // 4️⃣ check if branch_id or branch_no exists in deleted row
+    let branch = await this.branchRepo.findOne({
+      where: [
+        { branch_id: dto.branch_id, is_deleted: true },
+        { branch_no: dto.branch_no, is_deleted: true },
+      ],
+      relations: ['subjects'],
+    });
+
+    if (branch) {
+      // reuse deleted branch
+      branch.is_deleted = false;
+      branch.branch_id = dto.branch_id;
+      branch.branch_no = dto.branch_no;
+      branch.name = dto.name ?? '';
+      branch.contact = dto.contact ?? '';
+      branch.phone = dto.phone ?? '';
+      branch.address =
+        typeof dto.address === 'string'
+          ? JSON.parse(dto.address)
+          : (dto.address ?? {});
+    } else {
+      // create new branch
+      branch = this.branchRepo.create({
+        branch_id: dto.branch_id,
+        branch_no: dto.branch_no,
+      });
+      branch.name = dto.name ?? '';
+      branch.contact = dto.contact ?? '';
+      branch.phone = dto.phone ?? '';
+      branch.address =
+        typeof dto.address === 'string'
+          ? JSON.parse(dto.address)
+          : (dto.address ?? {});
+    }
+
+    // 5️⃣ assign subjects
     if (subjectIds.length > 0) {
       const subjects = await this.subjectRepo.find({
         where: { id: In(subjectIds) },
       });
-
       branch.subjects = subjects;
     }
 
-    return this.branchRepo.save(branch);
-  }
+    // 6️⃣ handle profile picture
+    if (file) {
+      if (branch.profile_pic) {
+        const oldPath = '.' + branch.profile_pic;
+        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+      }
+      branch.profile_pic = `/uploads/branches/${file.filename}`;
+    }
 
+    // 7️⃣ save branch
+    return await this.branchRepo.save(branch);
+  }
   async findAll(): Promise<Branch[]> {
     return this.branchRepo.find({
       where: { is_deleted: false },

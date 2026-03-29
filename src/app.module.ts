@@ -17,7 +17,7 @@ import { LaocationModule } from './location/laocation.module';
 import { PermissionsModule } from './permission/permissions.module';
 import { PermissionModuleModule } from './permission_modules/permission-module.module';
 import { ParentModule } from './parents/parent.module';
-import { TeachingsModule } from './teachings/teachings.module';
+import { TeachingModule } from './teachings/teachings.module';
 import { LessonsModule } from './lessons/lessons.module';
 import { LessonInfosModule } from './lesson-infos/lesson-infos.module';
 import { HomeworkModule } from './homeworks/homework.module';
@@ -79,7 +79,7 @@ import { SubjectEvaluationModule } from './subject_evaluations/subject-evaluatio
     PermissionsModule,
     PermissionModuleModule,
     ParentModule,
-    TeachingsModule,
+    TeachingModule,
     LessonsModule,
     LessonInfosModule,
     HomeworkModule,

@@ -7,7 +7,6 @@ import { SubjectType } from './subject-type.entity';
 
 @Injectable()
 export class SubjectTypeService {
-
   constructor(
     @InjectRepository(SubjectType)
     private subjectTypeRepo: Repository<SubjectType>,
@@ -20,34 +19,54 @@ export class SubjectTypeService {
 
   async findAll(): Promise<SubjectType[]> {
     return await this.subjectTypeRepo.find({
-      order: { id: 'DESC' }
+      order: { id: 'DESC' },
     });
   }
 
-  async findOne(id: number): Promise<SubjectType> {
-    const subject = await this.subjectTypeRepo.findOne({ where: { id } });
+  async findOne(id: string): Promise<SubjectType> {
+    const subjectType = await this.subjectTypeRepo.findOne({
+      where: { id },
+    });
 
-    if (!subject) {
-      throw new NotFoundException(`SubjectType ID ${id} not found`);
+    if (!subjectType) {
+      throw new NotFoundException(`SubjectType with ID ${id} not found`);
     }
 
-    return subject;
+    return subjectType;
   }
 
-  async update(id: number, updateDto: UpdateSubjectTypeDto): Promise<SubjectType> {
-    const subject = await this.findOne(id);
+  // Update SubjectType
+  async update(
+    id: string,
+    updateDto: UpdateSubjectTypeDto,
+  ): Promise<SubjectType> {
+    const subjectType = await this.findOne(id);
 
-    Object.assign(subject, updateDto);
+    // Merge DTO into entity
+    Object.assign(subjectType, updateDto);
 
-    return await this.subjectTypeRepo.save(subject);
+    return await this.subjectTypeRepo.save(subjectType);
   }
 
-  async remove(id: number): Promise<{ message: string }> {
-    const subject = await this.findOne(id);
+  // Soft Delete (Recommended)
+  async remove(id: string): Promise<{ message: string }> {
+    const subjectType = await this.findOne(id);
 
-    await this.subjectTypeRepo.remove(subject);
+    subjectType.is_deleted = true;
+    subjectType.is_active = false;
 
-    return { message: 'Deleted successfully' };
+    await this.subjectTypeRepo.save(subjectType);
+
+    return {
+      message: `SubjectType with ID ${id} has been soft deleted successfully`,
+    };
   }
 
+  // Hard Delete (only if you really need it)
+  async hardDelete(id: string): Promise<{ message: string }> {
+    const subjectType = await this.findOne(id);
+    await this.subjectTypeRepo.remove(subjectType);
+
+    return { message: 'SubjectType permanently deleted' };
+  }
 }

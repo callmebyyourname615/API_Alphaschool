@@ -42,7 +42,6 @@ export class SubjectService {
   }
 
   async update(id: string, dto: UpdateSubjectDto): Promise<Subject> {
-    // โหลด entity พร้อม relation
     const subject = await this.subjectRepo.findOne({
       where: { id },
       relations: ['curriculum', 'subjectType', 'class'],
@@ -50,28 +49,32 @@ export class SubjectService {
 
     if (!subject) throw new Error(`Subject with ID ${id} not found`);
 
-    // อัปเดต curriculum ถ้า dto มี
+    // Update basic fields
+    if (dto.subject_type_id) subject.subject_type_id = dto.subject_type_id;
+    if (dto.class_id) subject.class_id = dto.class_id;
     if (dto.curriculum_id) {
       const curriculum = await this.curriculumRepo.findOne({
         where: { id: dto.curriculum_id },
       });
       if (!curriculum)
         throw new Error(`Curriculum with ID ${dto.curriculum_id} not found`);
+
       subject.curriculum = curriculum;
       subject.curriculum_id = curriculum.id;
     }
 
-    // อัปเดต fields อื่น ๆ
-    if (dto.subject_type_id) subject.subject_type_id = dto.subject_type_id;
-    if (dto.class_id) subject.class_id = dto.class_id;
+    // Update file fields (only if new file uploaded)
     if (dto.file_s !== undefined) subject.file_s = dto.file_s;
     if (dto.file_t !== undefined) subject.file_t = dto.file_t;
     if (dto.file_e !== undefined) subject.file_e = dto.file_e;
 
-    // save
+    // Update s_year and t_year - ALWAYS update (this was missing!)
+    if (dto.s_year !== undefined) subject.s_year = dto.s_year;
+    if (dto.t_year !== undefined) subject.t_year = dto.t_year;
+
     await this.subjectRepo.save(subject);
 
-    // reload entity พร้อม relations
+    // Return with relations
     return await this.subjectRepo.findOneOrFail({
       where: { id },
       relations: ['curriculum', 'subjectType', 'class'],

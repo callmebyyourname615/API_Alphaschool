@@ -1,4 +1,3 @@
-// src/teachings/teachings.controller.ts
 import {
   Controller,
   Get,
@@ -7,40 +6,46 @@ import {
   Patch,
   Param,
   Delete,
-  HttpCode,
-  HttpStatus,
-  Put,
+  Query,
+  ParseUUIDPipe,
 } from '@nestjs/common';
-import { TeachingsService } from './teachings.service';
 import { CreateTeachingDto } from './dto/create-teaching.dto';
 import { UpdateTeachingDto } from './dto/update-teaching.dto';
+import { TeachingService } from './teachings.service';
 
 @Controller('teaching')
-export class TeachingsController {
-  constructor(private readonly teachingsService: TeachingsService) {}
+export class TeachingController {
+  constructor(private readonly teachingService: TeachingService) {}
 
   @Post()
-  async create(@Body() createTeachingDto: CreateTeachingDto) {
-    return this.teachingsService.create(createTeachingDto);
+  create(@Body() createDto: CreateTeachingDto) {
+    return this.teachingService.create(createDto);
   }
 
+  // Important endpoint for UI: Filter by branch (when user logs in)
   @Get()
-  async findAll() {
-    return this.teachingsService.findAll();
+  findAll(
+    @Query('branchId') branchId?: string,
+    @Query('academicYearId') academicYearId?: string,
+  ) {
+    return this.teachingService.findAll(branchId, academicYearId);
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return this.teachingsService.findOne(id);
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
+    return this.teachingService.findOne(id);
   }
 
-@Put(':id')
-update(@Param('id') id: string, @Body() updateTeachingDto: UpdateTeachingDto) {
-  return this.teachingsService.update(id, updateTeachingDto);
-}
+  @Patch(':id')
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() updateDto: UpdateTeachingDto,
+  ) {
+    return this.teachingService.update(id, updateDto);
+  }
+
   @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
-  async remove(@Param('id') id: string) {
-    await this.teachingsService.remove(id);
+  remove(@Param('id', ParseUUIDPipe) id: string) {
+    return this.teachingService.remove(id);
   }
 }

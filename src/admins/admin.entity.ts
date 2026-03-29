@@ -8,9 +8,11 @@ import {
   JoinTable,
   ManyToOne,
   JoinColumn,
+  OneToMany,
 } from 'typeorm';
 import { Role } from '../roles/role.entity';
 import { Branch } from '../branches/branch.entity';
+import { Teaching } from '../teachings/teaching.entity';
 
 @Entity('admins')
 export class Admin {
@@ -104,4 +106,7 @@ export class Admin {
 
   @UpdateDateColumn({ type: 'timestamptz' })
   updated_at: Date;
+
+  @OneToMany(() => Teaching, (teaching) => teaching.teacher)
+  teachings: Teaching[];
 }

@@ -1,14 +1,27 @@
-// src/teachings/teachings.module.ts
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { TeachingsService } from './teachings.service';
-import { TeachingsController } from './teachings.controller';
 import { Teaching } from './teaching.entity';
 
+// Import related entities (needed for relations)
+import { Admin } from '../admins/admin.entity';
+import { Subject } from '../subjects/subject.entity';
+import { AcademicYear } from '../academic_years/academic-year.entity';
+import { Branch } from '../branches/branch.entity';
+import { TeachingController } from './teachings.controller';
+import { TeachingService } from './teachings.service';
+
 @Module({
-  imports: [TypeOrmModule.forFeature([Teaching])],
-  controllers: [TeachingsController],
-  providers: [TeachingsService],
-  exports: [TeachingsService], // if needed in other modules
+  imports: [
+    TypeOrmModule.forFeature([
+      Teaching,
+      Admin,      // for relations
+      Subject,    // for relations
+      AcademicYear,
+      Branch,
+    ]),
+  ],
+  controllers: [TeachingController],
+  providers: [TeachingService],
+  exports: [TeachingService],   // Export if other modules need to use TeachingService
 })
-export class TeachingsModule {}
+export class TeachingModule {}

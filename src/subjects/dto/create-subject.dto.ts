@@ -21,6 +21,14 @@ export class CreateSubjectDto {
 
   @IsOptional()
   @IsString()
+  s_year?: string | null;
+
+  @IsOptional()
+  @IsString()
+  t_year?: string | null;
+
+  @IsOptional()
+  @IsString()
   file_t?: string | null;
 
   @IsOptional()
