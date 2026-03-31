@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DeepPartial, Repository } from 'typeorm';
-
+import { In } from 'typeorm';
 import { CreateSavingDto } from './dto/create-saving.dto';
 import { UpdateSavingDto } from './dto/update-saving.dto';
 import { Student } from '../students/student.entity';
@@ -462,6 +462,16 @@ export class SavingsService {
         ? Number(classSavings[classSavings.length - 1].closing_balance)
         : 0;
 
+    const classDepositTotal = classSavings
+      .filter((item) => item.transaction_type === SavingTransactionType.DEPOSIT)
+      .reduce((sum, item) => sum + Number(item.amount), 0);
+
+    const classWithdrawTotal = classSavings
+      .filter(
+        (item) => item.transaction_type === SavingTransactionType.WITHDRAW,
+      )
+      .reduce((sum, item) => sum + Number(item.amount), 0);
+
     const students = await this.studentRepository.find({
       where: {
         classId: {
@@ -479,25 +489,103 @@ export class SavingsService {
       },
     });
 
+    const studentIds = students.map((student: any) => student.id);
+
+    let studentSavings: Saving[] = [];
+
+    if (studentIds.length > 0) {
+      studentSavings = await this.savingRepository.find({
+        where: {
+          owner_type: SavingOwnerType.STUDENT,
+          student_id: In(studentIds),
+          is_deleted: false,
+        },
+        order: {
+          created_at: 'ASC',
+          updated_at: 'ASC',
+        },
+      });
+    }
+
+    const savingMap = new Map<string, Saving[]>();
+
+    for (const item of studentSavings) {
+      const key = item.student_id ?? '';
+      if (!savingMap.has(key)) {
+        savingMap.set(key, []);
+      }
+      savingMap.get(key)!.push(item);
+    }
+
     return {
       class_id: classId,
       class_name: (classInfo as any).name ?? null,
       class_balance: classBalance,
-      total_students: students.length,
-      students: students.map((student: any) => ({
-        id: student.id,
-        student_id: student.student_id,
-        first_name: student.first_name,
-        last_name: student.last_name,
-        full_name:
-          `${student.first_name ?? ''} ${student.last_name ?? ''}`.trim(),
-        gender: student.gender,
-        profile_image_path: student.profile_image_path,
-        saving_wallet: Number(student.saving_wallet ?? 0),
-        class: student.classId,
-        branch: student.branch,
-        academic_year: student.academicYear,
+      class_summary: {
+        deposit_total: classDepositTotal,
+        withdraw_total: classWithdrawTotal,
+        total_transactions: classSavings.length,
+      },
+      class_history: classSavings.map((item) => ({
+        id: item.id,
+        transaction_type: item.transaction_type,
+        opening_balance: this.formatMoney(item.opening_balance),
+        amount: this.formatMoney(item.amount),
+        closing_balance: this.formatMoney(item.closing_balance),
+        note: item.note ?? null,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
       })),
+      total_students: students.length,
+      students: students.map((student: any) => {
+        const histories = savingMap.get(student.id) ?? [];
+
+        const depositTotal = histories
+          .filter(
+            (item) => item.transaction_type === SavingTransactionType.DEPOSIT,
+          )
+          .reduce((sum, item) => sum + Number(item.amount), 0);
+
+        const withdrawTotal = histories
+          .filter(
+            (item) => item.transaction_type === SavingTransactionType.WITHDRAW,
+          )
+          .reduce((sum, item) => sum + Number(item.amount), 0);
+
+        return {
+          id: student.id,
+          student_id: student.student_id,
+          first_name: student.first_name,
+          last_name: student.last_name,
+          full_name:
+            `${student.first_name ?? ''} ${student.last_name ?? ''}`.trim(),
+          gender: student.gender,
+          profile_image_path: student.profile_image_path,
+          saving_wallet: Number(student.saving_wallet ?? 0),
+          class: student.classId,
+          branch: student.branch,
+          academic_year: student.academicYear,
+          summary: {
+            deposit_total: depositTotal,
+            withdraw_total: withdrawTotal,
+            total_transactions: histories.length,
+          },
+          history: histories.map((item) => ({
+            id: item.id,
+            transaction_type: item.transaction_type,
+            opening_balance: Number(item.opening_balance),
+            amount: Number(item.amount),
+            closing_balance: Number(item.closing_balance),
+            note: item.note ?? null,
+            created_at: item.created_at,
+            updated_at: item.updated_at,
+          })),
+        };
+      }),
     };
+  }
+
+  private formatMoney(value: string | number | null | undefined): string {
+    return Number(value ?? 0).toFixed(2);
   }
 }
