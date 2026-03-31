@@ -8,6 +8,7 @@ import { District } from '../location/district.entity';
 import { SearchStudentByClassDto } from './dto/search-students.dto';
 import { Branch } from '../branches/branch.entity';
 import { AcademicYear } from '../academic_years/academic-year.entity';
+import { Class } from '../classes/class.entity';
 
 @Injectable()
 export class StudentService {
@@ -20,6 +21,9 @@ export class StudentService {
 
     @InjectRepository(Branch)
     private branchRepo: Repository<Branch>,
+
+    @InjectRepository(Class)
+    private classRepo: Repository<Class>,
 
     @InjectRepository(AcademicYear)
     private academicYearRepo: Repository<AcademicYear>,
@@ -57,6 +61,14 @@ export class StudentService {
     });
     if (!branch) throw new NotFoundException('Branch not found');
     student.branch = branch;
+
+    const classEntity = await this.classRepo.findOne({
+      where: { id: data.classId },
+    });
+
+    if (!classEntity) throw new Error('Class not found');
+
+    student.classId = classEntity;
 
     const academicYear = await this.academicYearRepo.findOne({
       where: { id: data.academicYearId },

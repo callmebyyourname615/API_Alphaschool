@@ -1,43 +1,80 @@
-import { Controller, Post, Body, Get, Param, Query } from '@nestjs/common';
-import { AttendanceService } from './attendance.service';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+} from '@nestjs/common';
+import { AttendancesService } from './attendance.service';
 import { CreateAttendanceDto } from './dto/create-attendance.dto';
-import { GetAttendanceRangeDto } from './dto/get-attendance-range.dto';
+import { UpdateAttendanceDto } from './dto/update-attendance.dto';
+import { ScanQrDto } from './dto/scan-qr.dto';
+import { GetStudentsByDateRangeDto } from './dto/get-students-by-date-range.dto';
 
-@Controller('attendance')
-export class AttendanceController {
-  constructor(private readonly attendanceService: AttendanceService) {}
+@Controller('attendances')
+export class AttendancesController {
+  constructor(private readonly attendancesService: AttendancesService) {}
 
-  // 📌 ใช้ตอน scan QR
+  @Post()
+  create(@Body() createAttendanceDto: CreateAttendanceDto) {
+    return this.attendancesService.create(createAttendanceDto);
+  }
+
   @Post('scan')
-  checkInOut(@Body() dto: CreateAttendanceDto) {
-    return this.attendanceService.checkInOut(dto);
+  scanQr(@Body() scanQrDto: ScanQrDto) {
+    return this.attendancesService.scanQr(scanQrDto);
   }
 
-  // 📌 ดูประวัติวันนี้ของนักเรียน
-  @Get('today/:student_id')
-  findToday(@Param('student_id') student_id: string) {
-    return this.attendanceService.findTodayByStudent(student_id);
+  @Post('auto-absent/run')
+  runAutoAbsentNow() {
+    return this.attendancesService.runAutoAbsentNow();
   }
 
-@Post('range')
-getAllStudentsAttendance(@Body() body: GetAttendanceRangeDto) {
-  const {
-    class_id,
-    academic_year_id,
-    branch_id,
-    start_date,
-    end_date,
-    student_id,
-  } = body;
+  @Get()
+  findAll() {
+    return this.attendancesService.findAll();
+  }
 
-  return this.attendanceService.findAllStudentsWithAttendance(
-    class_id,
-    academic_year_id,
-    branch_id,
-    start_date,
-    end_date,
-    student_id,
-  );
-}
+  @Get('today/status')
+  getTodayStudentStatuses() {
+    return this.attendancesService.getTodayStudentStatuses();
+  }
 
+  @Get('classes/:classId/students')
+  getStudentsByClass(@Param('classId', new ParseUUIDPipe()) classId: string) {
+    return this.attendancesService.getStudentsByClass(classId);
+  }
+
+  @Get(':id')
+  findOne(@Param('id', new ParseUUIDPipe()) id: string) {
+    return this.attendancesService.findOne(id);
+  }
+
+  @Post('classes/all-students')
+  getAllStudentsByClassByPost(
+    @Body('classId', new ParseUUIDPipe()) classId: string,
+  ) {
+    return this.attendancesService.getAllStudentsByClass(classId);
+  }
+
+  @Post('students/date-range')
+  getStudentsByDateRange(@Body() body: GetStudentsByDateRangeDto) {
+    return this.attendancesService.getStudentsByDateRange(body);
+  }
+
+  @Patch(':id')
+  update(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() updateAttendanceDto: UpdateAttendanceDto,
+  ) {
+    return this.attendancesService.update(id, updateAttendanceDto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id', new ParseUUIDPipe()) id: string) {
+    return this.attendancesService.remove(id);
+  }
 }

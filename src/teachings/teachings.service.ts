@@ -79,11 +79,18 @@ async findOne(id: string): Promise<Teaching> {
 }
 
   // Update
-  async update(id: string, updateDto: UpdateTeachingDto): Promise<Teaching> {
-    const teaching = await this.findOne(id);
-    Object.assign(teaching, updateDto);
-    return await this.teachingRepo.save(teaching);
-  }
+async update(id: string, updateDto: UpdateTeachingDto): Promise<Teaching> {
+  await this.findOne(id); // validates existence, throws 404 if not found
+
+  await this.teachingRepo.update(id, {
+    adminId:        updateDto.adminId,
+    subjectId:      updateDto.subjectId,
+    academicYearId: updateDto.academicYearId,
+    branchId:       updateDto.branchId,
+  });
+
+  return this.findOne(id); // re-fetch with full relations
+}
 
   // Hard delete for now — add is_deleted column to entity for soft delete later
   async remove(id: string): Promise<{ message: string }> {

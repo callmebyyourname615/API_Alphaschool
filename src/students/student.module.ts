@@ -8,6 +8,7 @@ import { Province } from '../location/province.entity';
 import { District } from '../location/district.entity';
 import { AcademicYear } from '../academic_years/academic-year.entity';
 import { Branch } from '../branches/branch.entity';
+import { Class } from '../classes/class.entity';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { Branch } from '../branches/branch.entity';
       Student,
       Parent,
       Branch,
+      Class,
       AcademicYear,
       Province,
       District,
