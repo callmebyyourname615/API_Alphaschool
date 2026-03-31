@@ -1,18 +1,4 @@
-export class UpdateSavingDto {
-  branchId?: string;
-  academicYearId?: string;
-  studentId?: string;
-  classId?: string;
+import { PartialType } from '@nestjs/mapped-types';
+import { CreateSavingDto } from './create-saving.dto';
 
-  type?: string;
-  transactionType?: string;
-  status?: string;
-  openingBalance?: number;
-  amount?: number;
-  closingBalance?: number;
-  lockTime?: Date;
-  completeTime?: Date;
-  cancelTime?: Date;
-  isActive?: boolean;
-  isDeleted?: boolean;
-}
+export class UpdateSavingDto extends PartialType(CreateSavingDto) {}

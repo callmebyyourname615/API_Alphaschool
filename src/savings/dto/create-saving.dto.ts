@@ -1,16 +1,41 @@
-export class CreateSavingDto {
-  branchId: string;
-  academicYearId: string;
-  studentId: string;
-  classId?: string;
+import {
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  Min,
+} from 'class-validator';
+import { SavingOwnerType, SavingTransactionType } from '../savings.entity';
 
-  type: string;
-  transactionType: string;
-  status: string;
-  openingBalance?: number;
+export class CreateSavingDto {
+  @IsEnum(SavingOwnerType)
+  owner_type: SavingOwnerType;
+
+  @IsOptional()
+  @IsUUID()
+  student_id?: string;
+
+  @IsOptional()
+  @IsUUID()
+  class_id?: string;
+
+  @IsOptional()
+  @IsUUID()
+  branch_id?: string;
+
+  @IsOptional()
+  @IsUUID()
+  academic_year_id?: string;
+
+  @IsEnum(SavingTransactionType)
+  transaction_type: SavingTransactionType;
+
+  @IsNumber()
+  @Min(0.01)
   amount: number;
-  closingBalance?: number;
-  lockTime?: Date;
-  completeTime?: Date;
-  cancelTime?: Date;
+
+  @IsOptional()
+  @IsString()
+  note?: string;
 }
