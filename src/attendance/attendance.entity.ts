@@ -6,41 +6,74 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   JoinColumn,
+  Unique,
 } from 'typeorm';
 import { Student } from '../students/student.entity';
+import { Admin } from '../admins/admin.entity';
 
 export enum AttendanceType {
   PRESENT = 'PRESENT',
   ABSENT = 'ABSENT',
 }
 
+export enum ScanMethod {
+  QR = 'QR',
+  MANUAL = 'MANUAL',
+}
 
 @Entity('attendances')
+@Unique('UQ_ATTENDANCE_STUDENT_DATE', ['student_id', 'attendance_date'])
 export class Attendance {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Student, (student) => student.attendances, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Student, (student) => student.attendances, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'student_id' })
   student: Student;
 
   @Column({ type: 'uuid' })
-  student_id: string; // foreign key
+  student_id: string;
 
-  @Column({ type: 'enum', enum: ['ABSENT', 'PRESENT'], default: 'PRESENT' })
-  type: AttendanceType; // status
+  @ManyToOne(() => Admin, (admin) => admin.marked_attendances, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'marked_by_admin_id' })
+  marked_by_admin?: Admin | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  marked_by_admin_id?: string | null;
+
+  @Column({ type: 'date' })
+  attendance_date: string;
+
+  @Column({
+    type: 'enum',
+    enum: AttendanceType,
+    default: AttendanceType.PRESENT,
+  })
+  type: AttendanceType;
+
+  @Column({
+    type: 'enum',
+    enum: ScanMethod,
+    default: ScanMethod.QR,
+  })
+  scan_method: ScanMethod;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-  reason?: string; // เช่น ลา, มาสาย
+  reason?: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-  remark?: string; // เช่น On time, Late, Left early
+  remark?: string;
 
   @Column({ type: 'time', nullable: true })
-  check_in?: string; // เวลาเช็คอิน
+  check_in?: string;
 
   @Column({ type: 'time', nullable: true })
-  check_out?: string; // เวลาเช็คเอาท์
+  check_out?: string;
 
   @CreateDateColumn()
   created_at: Date;

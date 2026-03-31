@@ -27,7 +27,7 @@ import { EventActivity } from './eventactivity/eventActivity.entity';
 import { FileModule } from './file/file.module';
 import { ParticipationScoreModule } from './participantion_score/participation-score.module';
 import { ParticipationListModule } from './participantion_list/participation_list.module';
-import { AttendanceModule } from './attendance/attendance.module';
+import { AttendancesModule } from './attendance/attendance.module';
 import { SavingsModule } from './savings/saving.module';
 import { StudentModule } from './students/student.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
@@ -41,6 +41,7 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { SubjectTypeModule } from './subject_types/subject-type.module';
 import { CurriculumModule } from './curriculums/curriculum.module';
 import { SubjectEvaluationModule } from './subject_evaluations/subject-evaluation.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -48,6 +49,8 @@ import { SubjectEvaluationModule } from './subject_evaluations/subject-evaluatio
       isGlobal: true,
     }),
 
+    ScheduleModule.forRoot(),
+    
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -90,7 +93,7 @@ import { SubjectEvaluationModule } from './subject_evaluations/subject-evaluatio
     ParticipationListModule,
     ParticipationScoreModule,
     SavingsModule,
-    AttendanceModule,
+    AttendancesModule,
     StudentModule,
     AnnouncementsModule,
     EvaluationModule,

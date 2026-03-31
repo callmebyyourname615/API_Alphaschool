@@ -13,6 +13,7 @@ import {
 import { Role } from '../roles/role.entity';
 import { Branch } from '../branches/branch.entity';
 import { Teaching } from '../teachings/teaching.entity';
+import { Attendance } from '../attendance/attendance.entity';
 
 @Entity('admins')
 export class Admin {
@@ -109,4 +110,7 @@ export class Admin {
 
   @OneToMany(() => Teaching, (teaching) => teaching.teacher)
   teachings: Teaching[];
+
+  @OneToMany(() => Attendance, (attendance) => attendance.marked_by_admin)
+  marked_attendances: Attendance[];
 }

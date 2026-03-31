@@ -1,26 +1,48 @@
-import { IsEnum, IsOptional, IsString } from 'class-validator';
-import { AttendanceType } from '../attendance.entity';
+import {
+  IsDateString,
+  IsEnum,
+  IsMilitaryTime,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
+import { AttendanceType, ScanMethod } from '../attendance.entity';
 
 export class CreateAttendanceDto {
-  @IsString()
+  @IsUUID()
   student_id: string;
 
+  @IsOptional()
+  @IsUUID()
+  marked_by_admin_id?: string | null;
+
+  @IsDateString()
+  attendance_date: string;
+
+  @IsOptional()
   @IsEnum(AttendanceType)
-  type: AttendanceType; // PRESENT | ABSENT
+  type?: AttendanceType;
+
+  @IsOptional()
+  @IsEnum(ScanMethod)
+  scan_method?: ScanMethod;
 
   @IsOptional()
   @IsString()
+  @MaxLength(255)
   reason?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(255)
   remark?: string;
 
   @IsOptional()
-  @IsString()
-  check_in?: string; // "08:55"
+  @IsMilitaryTime()
+  check_in?: string;
 
   @IsOptional()
-  @IsString()
-  check_out?: string; // "17:05"
+  @IsMilitaryTime()
+  check_out?: string;
 }

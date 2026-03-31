@@ -40,10 +40,14 @@ export class StudentController {
   ) {
     const data: any = {
       ...body,
-      emergency_contacts: body.emergency_contacts
-        ? JSON.parse(body.emergency_contacts)
-        : [],
-      parents: body.parent_id ? JSON.parse(body.parent_id) : [],
+      emergency_contacts:
+        typeof body.emergency_contacts === 'string'
+          ? JSON.parse(body.emergency_contacts)
+          : body.emergency_contacts || [],
+      parents:
+        typeof body.parents === 'string'
+          ? JSON.parse(body.parents)
+          : body.parents || [],
     };
 
     if (file) {
@@ -104,11 +108,8 @@ export class StudentController {
   deleteStudent(@Param('id') id: string) {
     return this.service.deleteStudent(id);
   }
- @Post('by-class')
-async getStudentsByClass(
-  @Body() dto: SearchStudentByClassDto,
-) {
-  return this.service.getStudentsByClass(dto);
-}
-
+  @Post('by-class')
+  async getStudentsByClass(@Body() dto: SearchStudentByClassDto) {
+    return this.service.getStudentsByClass(dto);
+  }
 }
