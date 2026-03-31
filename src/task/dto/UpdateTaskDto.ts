@@ -23,4 +23,8 @@ export class UpdateTaskDto {
   @IsUUID()
   added_by_id?: string;
 
+  @IsOptional()
+  @IsString()
+  status?: string;
+
 }

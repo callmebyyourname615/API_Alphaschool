@@ -4,8 +4,8 @@ import {
   ExecutionContext,
   CallHandler,
 } from '@nestjs/common';
-import { Observable } from 'rxjs';
-import { tap } from 'rxjs/operators';
+import { Observable, throwError } from 'rxjs';
+import { tap, catchError } from 'rxjs/operators';
 import { LoggerService } from './logger.service';
 
 @Injectable()
@@ -40,6 +40,13 @@ export class LoggingInterceptor implements NestInterceptor {
             response,
           )}`,
         );
+      }),
+      catchError((err) => {
+        const duration = Date.now() - start;
+        this.logger.error(
+          `Error: ${method} ${url} - Duration: ${duration}ms - ${safeStringify(err?.message ?? err)}`,
+        );
+        return throwError(() => err);
       }),
     );
   }

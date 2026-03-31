@@ -1,11 +1,18 @@
-import { Controller, Get, Post, Body, Param, UploadedFile, UseInterceptors, Res, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UploadedFile, UseInterceptors, Res, NotFoundException, BadRequestException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import * as fs from 'fs';
-import { join } from 'path';
+import { join, extname } from 'path';
 import type { Response } from 'express';
 import { FileService } from './file.service';
 import { File } from './files.entity';
+
+const ALLOWED_MIME_TYPES = [
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+  'video/mp4', 'video/webm',
+  'application/pdf',
+];
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
 @Controller('files')
 export class FileController {
@@ -28,8 +35,15 @@ export class FileController {
     @Res() res: Response,
   ) {
     try {
+      // Validate module and filename to prevent path traversal
+      if (/[\/\\\.]{2,}/.test(module) || /[\/\\\.]{2,}/.test(filename)) {
+        throw new BadRequestException('Invalid file path');
+      }
+      const safeModule = module.replace(/[^a-zA-Z0-9_-]/g, '');
+      const safeFilename = filename.replace(/[^a-zA-Z0-9_.\-]/g, '');
+
       // Construct the full file path
-      const fullPath = join(process.cwd(), 'uploads', module, filename);
+      const fullPath = join(process.cwd(), 'uploads', safeModule, safeFilename);
 
       // Check if file exists
       if (!fs.existsSync(fullPath)) {
@@ -74,7 +88,6 @@ export class FileController {
     FileInterceptor('file', {
       storage: diskStorage({
         destination: (req, file, cb) => {
-          // Initially save to temp folder, will be moved in the controller
           const tempDir = join(process.cwd(), 'uploads', 'temp');
           fs.mkdirSync(tempDir, { recursive: true });
           cb(null, tempDir);
@@ -85,11 +98,18 @@ export class FileController {
           cb(null, `${timestamp}_${safeName}`);
         },
       }),
+      limits: { fileSize: MAX_FILE_SIZE },
+      fileFilter: (req, file, cb) => {
+        if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+          return cb(new BadRequestException(`File type '${file.mimetype}' is not allowed. Allowed: ${ALLOWED_MIME_TYPES.join(', ')}`), false);
+        }
+        cb(null, true);
+      },
     }),
   )
   async upload(
     @UploadedFile() fileData: Express.Multer.File,
-    @Body() body: { module: 'event' | 'event_activity' | 'task'; ownerId: string },
+    @Body() body: { module: 'event' | 'event_activity' | 'task' | 'comment'; ownerId: string },
   ): Promise<File> {
     const { module, ownerId } = body;
     
@@ -112,13 +132,14 @@ export class FileController {
     };
     if (module === 'event') payload.event_id = ownerId;
     else if (module === 'event_activity') payload.event_activity_id = ownerId;
+    else if (module === 'comment') payload.comment_id = ownerId;
     else payload.task_id = ownerId;
     return this.fileService.create(payload);
   }
 
   @Get('by/:module/:ownerId')
   findByModule(
-    @Param('module') module: 'event' | 'event_activity' | 'task',
+    @Param('module') module: 'event' | 'event_activity' | 'task' | 'comment',
     @Param('ownerId') ownerId: string,
   ): Promise<File[]> {
     return this.fileService.findByModuleAndOwner(module, ownerId);

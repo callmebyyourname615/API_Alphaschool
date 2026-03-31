@@ -28,6 +28,9 @@ export class EventActivity {
   @Column({ length: 255 })
   name: string;
 
+  @Column({ type: 'text', nullable: true })
+  description: string;
+
   @Column({ default: true })
   is_active: boolean;
 

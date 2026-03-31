@@ -23,7 +23,7 @@ import { LessonInfosModule } from './lesson-infos/lesson-infos.module';
 import { HomeworkModule } from './homeworks/homework.module';
 import { TaskModule } from './task/task.module';
 import { EventModule } from './event/event.module';
-import { EventActivity } from './eventactivity/eventActivity.entity';
+import { EventActivityModule } from './eventactivity/eventActivity.module';
 import { FileModule } from './file/file.module';
 import { ParticipationScoreModule } from './participantion_score/participation-score.module';
 import { ParticipationListModule } from './participantion_list/participation_list.module';
@@ -85,7 +85,7 @@ import { SubjectEvaluationModule } from './subject_evaluations/subject-evaluatio
     HomeworkModule,
     TaskModule,
     EventModule,
-    EventActivity,
+    EventActivityModule,
     FileModule,
     ParticipationListModule,
     ParticipationScoreModule,

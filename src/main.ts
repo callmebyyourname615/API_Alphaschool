@@ -17,11 +17,20 @@ async function bootstrap() {
   // Replace Nest default logger with custom Winston logger
   app.useLogger(logger);
 
-  // Enable CORS globally
+  // Enable CORS — restrict to known origins
+  const allowedOrigins = (config.get<string>('CORS_ORIGINS') || 'http://localhost:3000,http://localhost:3001').split(',').map(o => o.trim());
   app.enableCors({
-    origin: '*',
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, curl, etc.)
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    allowedHeaders: '*',
+    allowedHeaders: 'Content-Type,Authorization',
+    credentials: true,
   });
 
   // Set global API prefix from .env (e.g., /api or UUID)

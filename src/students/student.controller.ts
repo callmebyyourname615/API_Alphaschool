@@ -8,6 +8,7 @@ import {
   Body,
   UploadedFile,
   UseInterceptors,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -32,6 +33,15 @@ export class StudentController {
           cb(null, uniqueSuffix + extname(file.originalname));
         },
       }),
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+      fileFilter: (req, file, cb) => {
+        const allowed = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+        const ext = extname(file.originalname).toLowerCase();
+        if (!allowed.includes(ext)) {
+          return cb(new BadRequestException(`File type '${ext}' not allowed. Allowed: ${allowed.join(', ')}`), false);
+        }
+        cb(null, true);
+      },
     }),
   )
   async createStudent(
@@ -65,6 +75,15 @@ export class StudentController {
           cb(null, uniqueSuffix + extname(file.originalname));
         },
       }),
+      limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
+      fileFilter: (req, file, cb) => {
+        const allowed = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+        const ext = extname(file.originalname).toLowerCase();
+        if (!allowed.includes(ext)) {
+          return cb(new BadRequestException(`File type '${ext}' not allowed. Allowed: ${allowed.join(', ')}`), false);
+        }
+        cb(null, true);
+      },
     }),
   )
   async updateStudent(

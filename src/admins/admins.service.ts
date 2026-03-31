@@ -180,6 +180,11 @@ export class AdminsService {
       }
     }
 
+    // Hash password if provided
+    if (dto.password) {
+      admin.password = await bcrypt.hash(dto.password, 10);
+    }
+
     // Safe field updates
     Object.assign(admin, {
       username: dto.username ?? admin.username,

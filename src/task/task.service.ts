@@ -23,6 +23,7 @@ export class TaskService {
     // สร้าง Task
     const newTask = this.taskRepo.create({
       ...taskData,
+      deadline: taskData.deadline ? new Date(taskData.deadline as any) : undefined,
       student: student_id ? ({ id: student_id } as any) : null,
       added_by_id: data.added_by_id,
       added_by_type: data.added_by_type,
