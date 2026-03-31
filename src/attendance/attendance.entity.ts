@@ -46,7 +46,7 @@ export class Attendance {
   @Column({ type: 'uuid', nullable: true })
   marked_by_admin_id?: string | null;
 
-  @Column({ type: 'date' })
+  @Column({ type: 'date', nullable: true })
   attendance_date: string;
 
   @Column({
