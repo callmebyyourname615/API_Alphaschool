@@ -16,6 +16,7 @@ import { Branch } from '../branches/branch.entity';
 import { SubjectEvaluation } from '../subject_evaluations/subject-evaluation.entity';
 import { Teaching } from '../teachings/teaching.entity';
 import { SubjectType } from '../subject_types/subject-type.entity';
+import { TeachLearning } from '../teach_learning/teach-learning.entity';
 
 @Entity('subjects')
 export class Subject {
@@ -84,4 +85,7 @@ export class Subject {
 
   @OneToMany(() => Teaching, (teaching) => teaching.subject)
   teachings: Teaching[];
+
+  @OneToMany(() => TeachLearning, (teachLearning) => teachLearning.subject)
+teachLearnings: TeachLearning[];
 }

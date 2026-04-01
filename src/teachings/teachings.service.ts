@@ -8,6 +8,7 @@ import { Repository } from 'typeorm';
 import { Teaching } from './teaching.entity';
 import { CreateTeachingDto } from './dto/create-teaching.dto';
 import { UpdateTeachingDto } from './dto/update-teaching.dto';
+import { GetTeachingByAdminDto } from './dto/get-teaching-by-admin.dto';
 
 @Injectable()
 export class TeachingService {
@@ -57,6 +58,40 @@ export class TeachingService {
 
   return query.orderBy('teaching.createdAt', 'DESC').getMany();
 }
+
+async findByAdmin(dto: GetTeachingByAdminDto) {
+    const { adminId, branchId, academicYearId } = dto;
+
+    const query = this.teachingRepo
+      .createQueryBuilder('teaching')
+      .leftJoinAndSelect('teaching.teacher', 'teacher')
+      .leftJoinAndSelect('teaching.subject', 'subject')
+      .leftJoinAndSelect('teaching.academicYear', 'academicYear')
+      .leftJoinAndSelect('teaching.branch', 'branch')
+      .leftJoinAndSelect('subject.subjectType', 'subjectType')
+      .leftJoinAndSelect('subject.class', 'class')
+      .where('teaching.adminId = :adminId', { adminId });
+
+    if (branchId) {
+      query.andWhere('teaching.branchId = :branchId', { branchId });
+    }
+
+    if (academicYearId) {
+      query.andWhere('teaching.academicYearId = :academicYearId', {
+        academicYearId,
+      });
+    }
+
+    const teachings = await query
+      .orderBy('teaching.createdAt', 'DESC')
+      .getMany();
+
+    return {
+      adminId,
+      totalSubjects: teachings.length,
+      data: teachings,
+    };
+  }
 
 async findOne(id: string): Promise<Teaching> {
   const teaching = await this.teachingRepo.findOne({

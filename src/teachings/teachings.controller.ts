@@ -12,6 +12,7 @@ import {
 import { CreateTeachingDto } from './dto/create-teaching.dto';
 import { UpdateTeachingDto } from './dto/update-teaching.dto';
 import { TeachingService } from './teachings.service';
+import { GetTeachingByAdminDto } from './dto/get-teaching-by-admin.dto';
 
 @Controller('teaching')
 export class TeachingController {
@@ -36,6 +37,12 @@ export class TeachingController {
     return this.teachingService.findOne(id);
   }
 
+   @Post('by-admin')
+  findByAdmin(@Body() dto: GetTeachingByAdminDto) {
+    return this.teachingService.findByAdmin(dto);
+  }
+
+  
   @Patch(':id')
   update(
     @Param('id', ParseUUIDPipe) id: string,

@@ -42,6 +42,8 @@ import { SubjectTypeModule } from './subject_types/subject-type.module';
 import { CurriculumModule } from './curriculums/curriculum.module';
 import { SubjectEvaluationModule } from './subject_evaluations/subject-evaluation.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { TeachLearningModule } from './teach_learning/teach-learning.module';
+import { TeacherHomeworkModule } from './teacher-homework/teacher-homework.module';
 
 @Module({
   imports: [
@@ -105,6 +107,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     SubjectTypeModule,
     CurriculumModule,
     SubjectEvaluationModule,
+    TeachLearningModule,
+    TeacherHomeworkModule,
   ],
   providers: [],
   
