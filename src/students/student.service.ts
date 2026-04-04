@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Student } from './student.entity';
@@ -68,7 +72,7 @@ export class StudentService {
 
     if (!classEntity) throw new Error('Class not found');
 
-    student.classId = classEntity;
+    student.class = classEntity;
 
     const academicYear = await this.academicYearRepo.findOne({
       where: { id: data.academicYearId },
@@ -216,8 +220,6 @@ export class StudentService {
       }
 
       query.orderBy('student.first_name', 'ASC');
-
-
 
       const students = await query.getMany();
 

@@ -19,19 +19,18 @@ async function bootstrap() {
 
   // Enable CORS — restrict to known origins
   const allowedOrigins = (config.get<string>('CORS_ORIGINS') || 'http://localhost:3000,http://localhost:3001').split(',').map(o => o.trim());
-  app.enableCors({
-    origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, curl, etc.)
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    allowedHeaders: 'Content-Type,Authorization',
-    credentials: true,
-  });
+ app.enableCors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  allowedHeaders: 'Content-Type,Authorization,Cache-Control,cache-control',
+  credentials: true,
+});
 
   // Set global API prefix from .env (e.g., /api or UUID)
   const prefix = config.get<string>('API_PREFIX') ?? '/api';

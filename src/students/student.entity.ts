@@ -36,8 +36,11 @@ export class Student {
   student_id: string;
 
   @ManyToOne(() => Class, { nullable: true })
-  @JoinColumn({ name: 'class_id' }) // ← add this line
-  classId: Class;
+  @JoinColumn({ name: 'class_id' })
+  class: Class; // ← เปลี่ยนจาก classId เป็น class
+
+  @Column({ type: 'uuid', nullable: true })
+  class_id: string;
 
   @ManyToOne(() => Province, { nullable: true })
   province: Province;

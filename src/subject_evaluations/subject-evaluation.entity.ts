@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, CreateDateColumn, UpdateDateColumn, OneToMany } from 'typeorm';
 import { Subject } from '../subjects/subject.entity';
+import { Evaluation } from '../evaluations/evaluation.entity';
 
 @Entity('subject_evaluations')
 export class SubjectEvaluation {
@@ -28,4 +29,7 @@ export class SubjectEvaluation {
 
   @UpdateDateColumn()
   update_at: Date;
+
+  @OneToMany(() => Evaluation, (evaluation) => evaluation.subjectEvaluation)
+  evaluations: Evaluation[];
 }

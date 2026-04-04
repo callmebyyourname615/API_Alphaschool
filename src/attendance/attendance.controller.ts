@@ -55,9 +55,9 @@ export class AttendancesController {
 
   @Post('classes/all-students')
   getAllStudentsByClassByPost(
-    @Body('classId', new ParseUUIDPipe()) classId: string,
+    @Body('classid', new ParseUUIDPipe()) classid: string,
   ) {
-    return this.attendancesService.getAllStudentsByClass(classId);
+    return this.attendancesService.getAllStudentsByClass(classid);
   }
 
   @Post('students/date-range')

@@ -571,7 +571,7 @@ export class AttendancesService {
 
     const students = await this.studentRepository
       .createQueryBuilder('student')
-      .leftJoinAndSelect('student.classId', 'class')
+      .leftJoinAndSelect('student.class', 'class') // ใช้ 'class' ไม่ใช่ 'classId'
       .leftJoinAndSelect(
         'student.attendances',
         'attendance',
@@ -579,10 +579,9 @@ export class AttendancesService {
         { today },
       )
       .leftJoinAndSelect('attendance.marked_by_admin', 'marked_by_admin')
-      .where('class.id = :classId', { classId })
+      .where('class.id = :classId', { classId }) // classId เป็น UUID string จาก controller
       .orderBy('student.student_id', 'ASC')
       .getMany();
-
     return {
       class_id: classId,
       attendance_date: today,
@@ -655,7 +654,7 @@ export class AttendancesService {
 
     const qb = this.studentRepository
       .createQueryBuilder('student')
-      .leftJoinAndSelect('student.classId', 'class')
+      .leftJoinAndSelect('student.class', 'class') // ← ใช้ class
       .leftJoinAndSelect(
         'student.attendances',
         'attendance',
@@ -672,7 +671,6 @@ export class AttendancesService {
     if (class_id) {
       qb.where('class.id = :classId', { classId: class_id });
     }
-
     const students = await qb.getMany();
 
     return {
@@ -735,7 +733,7 @@ export class AttendancesService {
           last_name: student.last_name,
           gender: student.gender,
           profile_image_path: student.profile_image_path,
-          class: student.classId,
+          class: student.class,
           summary: {
             present_count,
             absent_count,
