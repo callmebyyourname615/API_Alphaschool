@@ -32,15 +32,25 @@ export class TeacherHomeworkService {
   ) {}
 
   async create(createDto: CreateTeacherHomeworkDto): Promise<TeacherHomework> {
+    // หาข้อมูล teaching
     const teaching = await this.teachingRepo.findOne({
       where: { id: createDto.teachingId },
       relations: ['branch'],
     });
-
     if (!teaching) {
       throw new BadRequestException('teachingId not found');
     }
 
+    // หาข้อมูล teachLearning
+    const teachLearning = await this.teachLearningRepo.findOne({
+      where: { id: createDto.teachLearningId },
+      relations: ['admin', 'subject'],
+    });
+    if (!teachLearning) {
+      throw new BadRequestException('teachLearningId not found');
+    }
+
+    // สร้าง items
     const items = (createDto.items ?? []).map((item, index) =>
       this.teacherHomeworkItemRepo.create({
         title: item.title,
@@ -51,11 +61,9 @@ export class TeacherHomeworkService {
         score: item.score,
       }),
     );
-
     this.validateAllItemsHaveScore(items);
 
     const status = createDto.status ?? TeacherHomeworkStatus.DRAFT;
-
     if (status === TeacherHomeworkStatus.SENT) {
       this.validateCanPublish(items);
     }
@@ -63,10 +71,10 @@ export class TeacherHomeworkService {
     const homework = this.teacherHomeworkRepo.create({
       teachingId: teaching.id,
       teaching,
-
-      branchId: teaching.branchId,
+      branchId: teaching.branch.id, // ต้องเอา id ของ branch
       branch: teaching.branch,
-
+      teachLearningId: teachLearning.id,
+      teachLearning,
       title: createDto.title,
       overallInstruction: createDto.overallInstruction ?? null,
       dueDate: createDto.dueDate ? new Date(createDto.dueDate) : null,
