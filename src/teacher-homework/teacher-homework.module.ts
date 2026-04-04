@@ -5,6 +5,7 @@ import { TeacherHomeworkItem } from './teacher-homework-item.entity';
 import { TeacherHomeworkService } from './teacher-homework.service';
 import { TeacherHomeworkController } from './teacher-homework.controller';
 import { TeachLearning } from '../teach_learning/teach-learning.entity';
+import { Teaching } from '../teachings/teaching.entity';
 
 
 @Module({
@@ -13,6 +14,7 @@ import { TeachLearning } from '../teach_learning/teach-learning.entity';
       TeacherHomework,
       TeacherHomeworkItem,
       TeachLearning,
+      Teaching,
     ]),
   ],
   controllers: [TeacherHomeworkController],

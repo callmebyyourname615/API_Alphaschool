@@ -1,9 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { Subject } from '../subjects/subject.entity';
-import { Lesson } from '../lessons/lesson.entity';
 import { Class } from '../classes/class.entity';
 import { Student } from '../students/student.entity';
-import { LessonInfo } from '../lesson-infos/lesson_info.entity';
 import { Admin } from '../admins/admin.entity';
 
 @Entity('evaluations')
@@ -14,14 +12,6 @@ export class Evaluation {
   @ManyToOne(() => Subject, { eager: true })
   @JoinColumn({ name: 'subject_id' })
   subject: Subject;
-
-  @ManyToOne(() => Lesson, { eager: true })
-  @JoinColumn({ name: 'lesson_id' })
-  lesson: Lesson;
-
-  @ManyToOne(() => LessonInfo, { eager: true })
-  @JoinColumn({ name: 'lesson_info_id' })
-  lesson_info: LessonInfo;
 
   @ManyToOne(() => Admin, { eager: true })
   @JoinColumn({ name: 'admin_id' })

@@ -13,6 +13,7 @@ import { CreateTeacherHomeworkItemDto } from './dto/create-teacher-homework-item
 import { UpdateTeacherHomeworkItemDto } from './dto/update-teacher-homework-item.dto';
 import { TeacherHomeworkStatus } from './teacher-homework-status.enum';
 import { TeachLearning } from '../teach_learning/teach-learning.entity';
+import { Teaching } from '../teachings/teaching.entity';
 
 @Injectable()
 export class TeacherHomeworkService {
@@ -25,16 +26,19 @@ export class TeacherHomeworkService {
 
     @InjectRepository(TeachLearning)
     private readonly teachLearningRepo: Repository<TeachLearning>,
+
+    @InjectRepository(Teaching)
+    private readonly teachingRepo: Repository<Teaching>,
   ) {}
 
   async create(createDto: CreateTeacherHomeworkDto): Promise<TeacherHomework> {
-    const teachLearning = await this.teachLearningRepo.findOne({
-      where: { id: createDto.teachLearningId },
-      relations: ['admin', 'subject'],
+    const teaching = await this.teachingRepo.findOne({
+      where: { id: createDto.teachingId },
+      relations: ['branch'],
     });
 
-    if (!teachLearning) {
-      throw new BadRequestException('teachLearningId not found');
+    if (!teaching) {
+      throw new BadRequestException('teachingId not found');
     }
 
     const items = (createDto.items ?? []).map((item, index) =>
@@ -48,7 +52,6 @@ export class TeacherHomeworkService {
       }),
     );
 
-    // ถ้ามี items ต้องมี score ครบทุก item
     this.validateAllItemsHaveScore(items);
 
     const status = createDto.status ?? TeacherHomeworkStatus.DRAFT;
@@ -58,8 +61,12 @@ export class TeacherHomeworkService {
     }
 
     const homework = this.teacherHomeworkRepo.create({
-      teachLearningId: createDto.teachLearningId,
-      teachLearning,
+      teachingId: teaching.id,
+      teaching,
+
+      branchId: teaching.branchId,
+      branch: teaching.branch,
+
       title: createDto.title,
       overallInstruction: createDto.overallInstruction ?? null,
       dueDate: createDto.dueDate ? new Date(createDto.dueDate) : null,
@@ -74,19 +81,18 @@ export class TeacherHomeworkService {
   }
 
   async findAll(
-    teachLearningId?: string,
+    teachingId?: string,
     status?: TeacherHomeworkStatus,
   ): Promise<TeacherHomework[]> {
     const query = this.teacherHomeworkRepo
       .createQueryBuilder('teacherHomework')
-      .leftJoinAndSelect('teacherHomework.teachLearning', 'teachLearning')
-      .leftJoinAndSelect('teachLearning.admin', 'admin')
-      .leftJoinAndSelect('teachLearning.subject', 'subject')
+      .leftJoinAndSelect('teacherHomework.teaching', 'teaching') // ✅
+      .leftJoinAndSelect('teacherHomework.branch', 'branch') // ✅
       .leftJoinAndSelect('teacherHomework.items', 'items');
 
-    if (teachLearningId) {
-      query.andWhere('teacherHomework.teachLearningId = :teachLearningId', {
-        teachLearningId,
+    if (teachingId) {
+      query.andWhere('teacherHomework.teachingId = :teachingId', {
+        teachingId,
       });
     }
 
@@ -104,9 +110,8 @@ export class TeacherHomeworkService {
     const homework = await this.teacherHomeworkRepo.findOne({
       where: { id },
       relations: [
-        'teachLearning',
-        'teachLearning.admin',
-        'teachLearning.subject',
+        'teaching', // ✅
+        'branch', // ✅
         'items',
       ],
       order: {
@@ -122,7 +127,6 @@ export class TeacherHomeworkService {
 
     return homework;
   }
-
   async update(
     id: string,
     updateDto: UpdateTeacherHomeworkDto,
@@ -343,9 +347,7 @@ export class TeacherHomeworkService {
     this.validateAllItemsHaveScore(items);
   }
 
-  private calculateTotalScore(
-    items: Array<{ score?: number | null }>,
-  ): number {
+  private calculateTotalScore(items: Array<{ score?: number | null }>): number {
     if (!items || items.length === 0) {
       return 0;
     }

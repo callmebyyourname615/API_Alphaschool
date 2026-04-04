@@ -11,9 +11,8 @@ import {
 import { Subject } from '../subjects/subject.entity';
 import { AcademicYear } from '../academic_years/academic-year.entity';
 import { Branch } from '../branches/branch.entity';
-import { Lesson } from '../lessons/lesson.entity';
 import { Admin } from '../admins/admin.entity';
-import { Homework } from '../homeworks/homework.entity';
+import { TeacherHomework } from '../teacher-homework/teacher-homework.entity';
 
 @Entity('teaching')
 @Index(['adminId', 'subjectId', 'academicYearId'], { unique: true })
@@ -53,9 +52,6 @@ export class Teaching {
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
 
-  @OneToMany(() => Lesson, (lesson) => lesson.teaching)
-  lessons: Lesson[];
-
-  @OneToMany(() => Homework, (homework) => homework.teaching)
-  homeworks: Homework[];
+  @OneToMany(() => TeacherHomework, (teacherhomework) => teacherhomework.teaching)
+  homeworks: TeacherHomework[];
 }

@@ -10,7 +10,6 @@ import {
   JoinColumn,
 } from 'typeorm';
 
-import { Homework } from '../homeworks/homework.entity';
 import { Saving } from '../savings/savings.entity';
 import { Appointment } from '../appointment/appointment.entity';
 import { AppointmentPerson } from '../appointment-person/appointment-person.entity';
@@ -18,6 +17,7 @@ import { Subject } from '../subjects/subject.entity';
 import { ManyToOne } from 'typeorm/browser';
 import { AcademicYear } from '../academic_years/academic-year.entity';
 import { Teaching } from '../teachings/teaching.entity';
+import { TeacherHomework } from '../teacher-homework/teacher-homework.entity';
 
 @Entity('branches')
 export class Branch {
@@ -72,8 +72,8 @@ export class Branch {
   })
   subjects: Subject[];
 
-  @OneToMany(() => Homework, (homework) => homework.branch)
-  homeworks: Homework[];
+  @OneToMany(() => TeacherHomework, (teacherHomework) => teacherHomework.branch)
+  teacherHomeworks: TeacherHomework[];
 
   @OneToMany(() => Saving, (saving) => saving.branch)
   savings: Saving[];

@@ -18,9 +18,6 @@ import { PermissionsModule } from './permission/permissions.module';
 import { PermissionModuleModule } from './permission_modules/permission-module.module';
 import { ParentModule } from './parents/parent.module';
 import { TeachingModule } from './teachings/teachings.module';
-import { LessonsModule } from './lessons/lessons.module';
-import { LessonInfosModule } from './lesson-infos/lesson-infos.module';
-import { HomeworkModule } from './homeworks/homework.module';
 import { TaskModule } from './task/task.module';
 import { EventModule } from './event/event.module';
 import { EventActivityModule } from './eventactivity/eventActivity.module';
@@ -85,9 +82,6 @@ import { TeacherHomeworkModule } from './teacher-homework/teacher-homework.modul
     PermissionModuleModule,
     ParentModule,
     TeachingModule,
-    LessonsModule,
-    LessonInfosModule,
-    HomeworkModule,
     TaskModule,
     EventModule,
     EventActivityModule,

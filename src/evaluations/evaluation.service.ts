@@ -3,12 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Evaluation } from './evaluation.entity';
 import { Subject } from '../subjects/subject.entity';
-import { Lesson } from '../lessons/lesson.entity';
 import { Class } from '../classes/class.entity';
 import { Student } from '../students/student.entity';
 import { CreateEvaluationDto } from './dto/create-evaluation.dto';
 import { UpdateEvaluationDto } from './dto/update-evaluation.dto';
-import { LessonInfo } from '../lesson-infos/lesson_info.entity';
 import { Admin } from '../admins/admin.entity';
 
 @Injectable()
@@ -18,10 +16,6 @@ export class EvaluationService {
     private readonly evaluationRepo: Repository<Evaluation>,
     @InjectRepository(Subject)
     private readonly subjectRepo: Repository<Subject>,
-    @InjectRepository(Lesson)
-    private readonly lessonRepo: Repository<Lesson>,
-    @InjectRepository(LessonInfo)
-    private readonly lessonInfoRepo: Repository<LessonInfo>,
     @InjectRepository(Admin)
     private readonly adminRepo: Repository<Admin>,
     @InjectRepository(Class)
@@ -33,14 +27,6 @@ export class EvaluationService {
   async createEvaluation(dto: CreateEvaluationDto) {
   const subject = await this.subjectRepo.findOne({
     where: { id: String(dto.subject_id) },
-  });
-
-  const lesson = await this.lessonRepo.findOne({
-    where: { id: String(dto.lesson_id) },
-  });
-
-  const lesson_info = await this.lessonInfoRepo.findOne({
-    where: { id: String(dto.lesson_info_id) },
   });
 
   const admin = await this.adminRepo.findOne({
@@ -55,14 +41,12 @@ export class EvaluationService {
     where: { id: String(dto.student_id) },
   });
 
-  if (!subject || !lesson || !lesson_info || !admin || !classEntity || !student) {
+  if (!subject || !admin || !classEntity || !student) {
     throw new NotFoundException('Related entity not found');
   }
 
   const evaluation = this.evaluationRepo.create({
     subject,
-    lesson,
-    lesson_info,
     admin,
     class: classEntity,
     student,
@@ -98,22 +82,6 @@ export class EvaluationService {
     });
     if (!subject) throw new NotFoundException(`Subject with id ${dto.subject_id} not found`);
     evaluation.subject = subject;
-  }
-
-  if (dto.lesson_id) {
-    const lesson = await this.lessonRepo.findOne({
-      where: { id: String(dto.lesson_id) },
-    });
-    if (!lesson) throw new NotFoundException(`Lesson with id ${dto.lesson_id} not found`);
-    evaluation.lesson = lesson;
-  }
-
-  if (dto.lesson_info_id) {
-    const lessonInfo = await this.lessonInfoRepo.findOne({
-      where: { id: String(dto.lesson_info_id) },
-    });
-    if (!lessonInfo) throw new NotFoundException(`LessonInfo with id ${dto.lesson_info_id} not found`);
-    evaluation.lesson_info = lessonInfo;
   }
 
   if (dto.admin_id) {

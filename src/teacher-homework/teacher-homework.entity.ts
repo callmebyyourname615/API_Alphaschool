@@ -8,36 +8,68 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
+
 import { TeacherHomeworkItem } from './teacher-homework-item.entity';
 import { TeacherHomeworkStatus } from './teacher-homework-status.enum';
 import { TeachLearning } from '../teach_learning/teach-learning.entity';
+import { Branch } from '../branches/branch.entity';
+import { Teaching } from '../teachings/teaching.entity';
+import { Task } from '../task/task.entity';
 
 @Entity('teacher_homework')
 export class TeacherHomework {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('uuid', { name: 'teach_learning_id' })
+  // =========================
+  // FK: Teaching (MAIN RELATION)
+  // =========================
+  @Column('uuid', { name: 'teaching_id', nullable: true })
+  teachingId: string;
+
+  @ManyToOne(() => Teaching, (teaching) => teaching.homeworks, {
+    nullable: false,
+    onDelete: 'RESTRICT',
+  })
+  @JoinColumn({ name: 'teaching_id' })
+  teaching: Teaching;
+
+  // =========================
+  // FK: Branch
+  // =========================
+  @Column('uuid', { name: 'branch_id', nullable: true })
+  branchId: string;
+
+  @ManyToOne(() => Branch, (branch) => branch.teacherHomeworks, {
+    nullable: false,
+    onDelete: 'RESTRICT',
+  })
+  @JoinColumn({ name: 'branch_id' })
+  branch: Branch;
+
+  // =========================
+  // OPTIONAL: TeachLearning
+  // =========================
+  @Column('uuid', { name: 'teach_learning_id', nullable: true })
   teachLearningId: string;
 
-  @ManyToOne(
-    () => TeachLearning,
-    (teachLearning) => teachLearning.teacherHomeworks,
-    {
-      nullable: false,
-      onDelete: 'RESTRICT',
-    },
-  )
+  @ManyToOne(() => TeachLearning, (tl) => tl.teacherHomeworks, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
   @JoinColumn({ name: 'teach_learning_id' })
   teachLearning: TeachLearning;
 
+  // =========================
+  // BASIC FIELDS
+  // =========================
   @Column({ type: 'varchar', length: 255 })
   title: string;
 
   @Column({ type: 'text', name: 'overall_instruction', nullable: true })
   overallInstruction: string | null;
 
-  @Column({ type: 'timestamp', name: 'due_date', nullable: true })
+  @Column({ type: 'timestamptz', name: 'due_date', nullable: true })
   dueDate: Date | null;
 
   @Column({
@@ -47,17 +79,29 @@ export class TeacherHomework {
   })
   status: TeacherHomeworkStatus;
 
-  @Column({ type: 'timestamp', name: 'sent_at', nullable: true })
+  @Column({ type: 'timestamptz', name: 'sent_at', nullable: true })
   sentAt: Date | null;
 
   @Column({ type: 'int', name: 'total_score', default: 0 })
   totalScore: number;
 
+  // =========================
+  // RELATIONS
+  // =========================
+
+  // Items (questions / parts)
   @OneToMany(() => TeacherHomeworkItem, (item) => item.teacherHomework, {
     cascade: true,
   })
   items: TeacherHomeworkItem[];
 
+  // Tasks (student submissions / assignments)
+  @OneToMany(() => Task, (task) => task.homework)
+  tasks: Task[];
+
+  // =========================
+  // TIMESTAMPS
+  // =========================
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 
