@@ -6,6 +6,7 @@ import {
   UpdateDateColumn,
   OneToMany,
   ManyToMany,
+  ManyToOne,
   JoinTable,
   JoinColumn,
 } from 'typeorm';
@@ -14,7 +15,6 @@ import { Saving } from '../savings/savings.entity';
 import { Appointment } from '../appointment/appointment.entity';
 import { AppointmentPerson } from '../appointment-person/appointment-person.entity';
 import { Subject } from '../subjects/subject.entity';
-import { ManyToOne } from 'typeorm/browser';
 import { AcademicYear } from '../academic_years/academic-year.entity';
 import { Teaching } from '../teachings/teaching.entity';
 import { TeacherHomework } from '../teacher-homework/teacher-homework.entity';
@@ -57,8 +57,10 @@ export class Branch {
   @UpdateDateColumn()
   updated_at: Date;
 
-  // 🔥 Assign Subjects to Branch
-  @ManyToMany(() => Subject)
+  // =========================
+  // MANY-TO-MANY: Subject
+  // =========================
+  @ManyToMany(() => Subject, (subject) => subject.branches)
   @JoinTable({
     name: 'branch_subjects',
     joinColumn: {
@@ -72,6 +74,9 @@ export class Branch {
   })
   subjects: Subject[];
 
+  // =========================
+  // RELATIONS
+  // =========================
   @OneToMany(() => TeacherHomework, (teacherHomework) => teacherHomework.branch)
   teacherHomeworks: TeacherHomework[];
 

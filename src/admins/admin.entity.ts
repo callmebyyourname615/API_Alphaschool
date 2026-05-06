@@ -91,6 +91,12 @@ export class Admin {
   @Column({ type: 'varchar', length: 100, nullable: true })
   province: string | null;
 
+  @Column({ type: 'text', nullable: true })
+  home_address: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  home_picture_url: string | null; // ✅
+
   @Column({ type: 'varchar', length: 20, nullable: true })
   current_academic_year: string | null;
 
@@ -116,5 +122,5 @@ export class Admin {
   marked_attendances: Attendance[];
 
   @OneToMany(() => TeachLearning, (teachLearning) => teachLearning.admin)
-teachLearnings: TeachLearning[];
+  teachLearnings: TeachLearning[];
 }

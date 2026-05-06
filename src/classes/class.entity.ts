@@ -8,10 +8,12 @@ import {
   JoinColumn,
   OneToMany,
 } from 'typeorm';
-import { Branch } from '../branches/branch.entity';
 import { YearLevel } from '../year_levels/year-level.entity';
 import { Saving } from '../savings/savings.entity';
 import { ParticipationList } from '../participantion_list/participation_list.entity';
+import { Subject } from '../subjects/subject.entity';
+import { TeacherHomeworkItem } from '../teacher-homework/teacher-homework-item.entity';
+import { TeacherHomework } from '../teacher-homework/teacher-homework.entity';
 
 @Entity('classes')
 export class Class {
@@ -47,4 +49,13 @@ export class Class {
 
   @OneToMany(() => ParticipationList, (list) => list.classes)
   participationLists: ParticipationList[];
+
+  @OneToMany(() => Subject, (subject) => subject.class)
+  subjects: Subject[];
+
+  @OneToMany(() => TeacherHomework, (hw) => hw.class)
+  teacherHomeworks: TeacherHomework[];
+
+  @OneToMany(() => TeacherHomeworkItem, (item) => item.class)
+  teacherHomeworkItems: TeacherHomeworkItem[];
 }

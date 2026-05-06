@@ -8,13 +8,25 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
+  UseInterceptors,
+  HttpCode,
+  HttpStatus,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+import { ApiConsumes, ApiOperation } from '@nestjs/swagger';
 import { TeacherHomeworkService } from './teacher-homework.service';
 import { CreateTeacherHomeworkDto } from './dto/create-teacher-homework.dto';
 import { UpdateTeacherHomeworkDto } from './dto/update-teacher-homework.dto';
 import { CreateTeacherHomeworkItemDto } from './dto/create-teacher-homework-item.dto';
 import { UpdateTeacherHomeworkItemDto } from './dto/update-teacher-homework-item.dto';
 import { TeacherHomeworkStatus } from './teacher-homework-status.enum';
+
+const ALLOWED_IMAGE_TYPES = ['.jpg', '.jpeg', '.png', '.gif'];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 @Controller('teacher-homework')
 export class TeacherHomeworkController {
@@ -23,8 +35,37 @@ export class TeacherHomeworkController {
   ) {}
 
   @Post()
-  create(@Body() createDto: CreateTeacherHomeworkDto) {
-    return this.teacherHomeworkService.create(createDto);
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Create a new homework (with optional image)' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: './uploads/homeworks',
+        filename: (_req, file, cb) => {
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname).toLowerCase();
+          cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+        },
+      }),
+      fileFilter: (_req, file, cb) => {
+        const ext = extname(file.originalname).toLowerCase();
+        if (!ALLOWED_IMAGE_TYPES.includes(ext)) {
+          return cb(
+            new BadRequestException('Only image files are allowed (.jpg, .jpeg, .png, .gif)'),
+            false,
+          );
+        }
+        cb(null, true);
+      },
+      limits: { fileSize: MAX_FILE_SIZE },
+    }),
+  )
+  async create(
+    @Body() createDto: CreateTeacherHomeworkDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.teacherHomeworkService.create(createDto, file);
   }
 
   @Get()
@@ -36,11 +77,38 @@ export class TeacherHomeworkController {
   }
 
   @Post(':homeworkId/items')
-  createItem(
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Add an item to a homework (with optional image)' })
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: './uploads/homeworks',
+        filename: (_req, file, cb) => {
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          const ext = extname(file.originalname).toLowerCase();
+          cb(null, `${file.fieldname}-${uniqueSuffix}${ext}`);
+        },
+      }),
+      fileFilter: (_req, file, cb) => {
+        const ext = extname(file.originalname).toLowerCase();
+        if (!ALLOWED_IMAGE_TYPES.includes(ext)) {
+          return cb(
+            new BadRequestException('Only image files are allowed (.jpg, .jpeg, .png, .gif)'),
+            false,
+          );
+        }
+        cb(null, true);
+      },
+      limits: { fileSize: MAX_FILE_SIZE },
+    }),
+  )
+  async createItem(
     @Param('homeworkId', ParseUUIDPipe) homeworkId: string,
     @Body() createDto: CreateTeacherHomeworkItemDto,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.teacherHomeworkService.createItem(homeworkId, createDto);
+    return this.teacherHomeworkService.createItem(homeworkId, createDto, file);
   }
 
   @Get(':homeworkId/items')

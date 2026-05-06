@@ -14,6 +14,7 @@ import { UpdateTeacherHomeworkItemDto } from './dto/update-teacher-homework-item
 import { TeacherHomeworkStatus } from './teacher-homework-status.enum';
 import { TeachLearning } from '../teach_learning/teach-learning.entity';
 import { Teaching } from '../teachings/teaching.entity';
+import { Class } from '../classes/class.entity'; // ✅ new
 
 @Injectable()
 export class TeacherHomeworkService {
@@ -29,28 +30,34 @@ export class TeacherHomeworkService {
 
     @InjectRepository(Teaching)
     private readonly teachingRepo: Repository<Teaching>,
+
+    @InjectRepository(Class) // ✅ new
+    private readonly classRepo: Repository<Class>,
   ) {}
 
-  async create(createDto: CreateTeacherHomeworkDto): Promise<TeacherHomework> {
-    // หาข้อมูล teaching
+  async create(
+    createDto: CreateTeacherHomeworkDto,
+    file?: Express.Multer.File,
+  ): Promise<TeacherHomework> {
     const teaching = await this.teachingRepo.findOne({
       where: { id: createDto.teachingId },
       relations: ['branch'],
     });
-    if (!teaching) {
-      throw new BadRequestException('teachingId not found');
-    }
+    if (!teaching) throw new BadRequestException('teachingId not found');
 
-    // หาข้อมูล teachLearning
     const teachLearning = await this.teachLearningRepo.findOne({
       where: { id: createDto.teachLearningId },
       relations: ['admin', 'subject'],
     });
-    if (!teachLearning) {
-      throw new BadRequestException('teachLearningId not found');
+    if (!teachLearning) throw new BadRequestException('teachLearningId not found');
+
+    // ✅ Resolve class if provided
+    let cls: Class | null = null;
+    if (createDto.classId) {
+      cls = await this.classRepo.findOne({ where: { id: createDto.classId } });
+      if (!cls) throw new BadRequestException('classId not found');
     }
 
-    // สร้าง items
     const items = (createDto.items ?? []).map((item, index) =>
       this.teacherHomeworkItemRepo.create({
         title: item.title,
@@ -59,6 +66,9 @@ export class TeacherHomeworkService {
         imageUrl: item.imageUrl ?? null,
         sortOrder: item.sortOrder ?? index + 1,
         score: item.score,
+        // ✅ Each item inherits class from parent by default
+        classId: cls?.id ?? null,
+        class: cls ?? undefined,
       }),
     );
     this.validateAllItemsHaveScore(items);
@@ -71,10 +81,12 @@ export class TeacherHomeworkService {
     const homework = this.teacherHomeworkRepo.create({
       teachingId: teaching.id,
       teaching,
-      branchId: teaching.branch.id, // ต้องเอา id ของ branch
+      branchId: teaching.branch.id,
       branch: teaching.branch,
       teachLearningId: teachLearning.id,
       teachLearning,
+      classId: cls?.id ?? null,   // ✅ new
+      class: cls ?? undefined,    // ✅ new
       title: createDto.title,
       overallInstruction: createDto.overallInstruction ?? null,
       dueDate: createDto.dueDate ? new Date(createDto.dueDate) : null,
@@ -91,21 +103,24 @@ export class TeacherHomeworkService {
   async findAll(
     teachingId?: string,
     status?: TeacherHomeworkStatus,
+    classId?: string, // ✅ new filter
   ): Promise<TeacherHomework[]> {
     const query = this.teacherHomeworkRepo
       .createQueryBuilder('teacherHomework')
-      .leftJoinAndSelect('teacherHomework.teaching', 'teaching') // ✅
-      .leftJoinAndSelect('teacherHomework.branch', 'branch') // ✅
-      .leftJoinAndSelect('teacherHomework.items', 'items');
+      .leftJoinAndSelect('teacherHomework.teaching', 'teaching')
+      .leftJoinAndSelect('teacherHomework.branch', 'branch')
+      .leftJoinAndSelect('teacherHomework.class', 'class') // ✅ new
+      .leftJoinAndSelect('teacherHomework.items', 'items')
+      .leftJoinAndSelect('items.class', 'itemClass'); // ✅ new
 
     if (teachingId) {
-      query.andWhere('teacherHomework.teachingId = :teachingId', {
-        teachingId,
-      });
+      query.andWhere('teacherHomework.teachingId = :teachingId', { teachingId });
     }
-
     if (status) {
       query.andWhere('teacherHomework.status = :status', { status });
+    }
+    if (classId) { // ✅ new
+      query.andWhere('teacherHomework.classId = :classId', { classId });
     }
 
     return query
@@ -117,16 +132,8 @@ export class TeacherHomeworkService {
   async findOne(id: string): Promise<TeacherHomework> {
     const homework = await this.teacherHomeworkRepo.findOne({
       where: { id },
-      relations: [
-        'teaching', // ✅
-        'branch', // ✅
-        'items',
-      ],
-      order: {
-        items: {
-          sortOrder: 'ASC',
-        },
-      },
+      relations: ['teaching', 'branch', 'class', 'items', 'items.class'], // ✅ added class & items.class
+      order: { items: { sortOrder: 'ASC' } },
     });
 
     if (!homework) {
@@ -135,6 +142,7 @@ export class TeacherHomeworkService {
 
     return homework;
   }
+
   async update(
     id: string,
     updateDto: UpdateTeacherHomeworkDto,
@@ -146,43 +154,40 @@ export class TeacherHomeworkService {
         where: { id: updateDto.teachLearningId },
         relations: ['admin', 'subject'],
       });
-
-      if (!teachLearning) {
-        throw new BadRequestException('teachLearningId not found');
-      }
-
+      if (!teachLearning) throw new BadRequestException('teachLearningId not found');
       existing.teachLearningId = updateDto.teachLearningId;
       existing.teachLearning = teachLearning;
     }
 
-    if (updateDto.title !== undefined) {
-      existing.title = updateDto.title;
+    // ✅ Update class on homework
+    if (updateDto.classId !== undefined) {
+      if (updateDto.classId === null) {
+        existing.classId = null;
+        existing.class = null;
+      } else {
+        const cls = await this.classRepo.findOne({ where: { id: updateDto.classId } });
+        if (!cls) throw new BadRequestException('classId not found');
+        existing.classId = cls.id;
+        existing.class = cls;
+      }
     }
 
-    if (updateDto.overallInstruction !== undefined) {
-      existing.overallInstruction = updateDto.overallInstruction ?? null;
-    }
-
-    if (updateDto.dueDate !== undefined) {
-      existing.dueDate = updateDto.dueDate ? new Date(updateDto.dueDate) : null;
-    }
+    if (updateDto.title !== undefined) existing.title = updateDto.title;
+    if (updateDto.overallInstruction !== undefined) existing.overallInstruction = updateDto.overallInstruction ?? null;
+    if (updateDto.dueDate !== undefined) existing.dueDate = updateDto.dueDate ? new Date(updateDto.dueDate) : null;
 
     if (updateDto.status !== undefined) {
       existing.status = updateDto.status;
-
       if (updateDto.status === TeacherHomeworkStatus.SENT) {
         this.validateCanPublish(existing.items);
         existing.sentAt = existing.sentAt ?? new Date();
       }
-
       if (updateDto.status === TeacherHomeworkStatus.DRAFT) {
         existing.sentAt = null;
       }
     }
 
-    // ป้องกันข้อมูลเก่า/ข้อมูลแก้ไขที่ item ไม่มี score
     this.validateAllItemsHaveScore(existing.items);
-
     existing.totalScore = this.calculateTotalScore(existing.items);
 
     const saved = await this.teacherHomeworkRepo.save(existing);
@@ -192,57 +197,67 @@ export class TeacherHomeworkService {
   async remove(id: string): Promise<{ message: string }> {
     const homework = await this.findOne(id);
     await this.teacherHomeworkRepo.remove(homework);
-
     return { message: 'Teacher homework deleted successfully' };
   }
 
   async publish(id: string): Promise<TeacherHomework> {
     const homework = await this.findOne(id);
-
     this.validateCanPublish(homework.items);
-
     homework.status = TeacherHomeworkStatus.SENT;
     homework.sentAt = new Date();
     homework.totalScore = this.calculateTotalScore(homework.items);
-
     await this.teacherHomeworkRepo.save(homework);
-
     return this.findOne(id);
   }
 
   async createItem(
     homeworkId: string,
     createDto: CreateTeacherHomeworkItemDto,
+    file?: Express.Multer.File,
   ): Promise<TeacherHomeworkItem> {
     const homework = await this.teacherHomeworkRepo.findOne({
       where: { id: homeworkId },
-      relations: ['items'],
+      relations: ['items', 'class'], // ✅ load class so we can inherit it
     });
 
     if (!homework) {
-      throw new NotFoundException(
-        `Teacher homework with ID ${homeworkId} not found`,
-      );
+      throw new NotFoundException(`Teacher homework with ID ${homeworkId} not found`);
     }
 
     if (createDto.score === null || createDto.score === undefined) {
       throw new BadRequestException('score is required');
     }
 
+    // ✅ Resolve class: use item-level override, fallback to homework's class
+    let cls: Class | null = homework.class ?? null;
+    if (createDto.classId !== undefined) {
+      if (createDto.classId === null) {
+        cls = null;
+      } else {
+        cls = await this.classRepo.findOne({ where: { id: createDto.classId } });
+        if (!cls) throw new BadRequestException('classId not found');
+      }
+    }
+
+    const imageUrl = file
+      ? `uploads/homeworks/${file.filename}`
+      : (createDto.imageUrl ?? null);
+
     const item = this.teacherHomeworkItemRepo.create({
       teacherHomeworkId: homeworkId,
       teacherHomework: homework,
+      classId: cls?.id ?? null,  // ✅ new
+      class: cls ?? undefined,   // ✅ new
       title: createDto.title,
       teacherGuidePage: createDto.teacherGuidePage ?? null,
       itemInstruction: createDto.itemInstruction ?? null,
-      imageUrl: createDto.imageUrl ?? null,
+      imageUrl,
       sortOrder: createDto.sortOrder ?? (homework.items?.length ?? 0) + 1,
       score: createDto.score,
     });
 
     const savedItem = await this.teacherHomeworkItemRepo.save(item);
     await this.refreshTotalScore(homeworkId);
-
     return this.findItem(savedItem.id);
   }
 
@@ -250,15 +265,13 @@ export class TeacherHomeworkService {
     const homework = await this.teacherHomeworkRepo.findOne({
       where: { id: homeworkId },
     });
-
     if (!homework) {
-      throw new NotFoundException(
-        `Teacher homework with ID ${homeworkId} not found`,
-      );
+      throw new NotFoundException(`Teacher homework with ID ${homeworkId} not found`);
     }
 
     return this.teacherHomeworkItemRepo.find({
       where: { teacherHomeworkId: homeworkId },
+      relations: ['class'], // ✅ new
       order: { sortOrder: 'ASC', createdAt: 'ASC' },
     });
   }
@@ -266,15 +279,11 @@ export class TeacherHomeworkService {
   async findItem(itemId: string): Promise<TeacherHomeworkItem> {
     const item = await this.teacherHomeworkItemRepo.findOne({
       where: { id: itemId },
-      relations: ['teacherHomework'],
+      relations: ['teacherHomework', 'class'], // ✅ added class
     });
-
     if (!item) {
-      throw new NotFoundException(
-        `Teacher homework item with ID ${itemId} not found`,
-      );
+      throw new NotFoundException(`Teacher homework item with ID ${itemId} not found`);
     }
-
     return item;
   }
 
@@ -288,78 +297,55 @@ export class TeacherHomeworkService {
       throw new BadRequestException('score is required');
     }
 
-    if (updateDto.title !== undefined) {
-      existingItem.title = updateDto.title;
+    // ✅ Update class on item
+    if (updateDto.classId !== undefined) {
+      if (updateDto.classId === null) {
+        existingItem.classId = null;
+        existingItem.class = null;
+      } else {
+        const cls = await this.classRepo.findOne({ where: { id: updateDto.classId } });
+        if (!cls) throw new BadRequestException('classId not found');
+        existingItem.classId = cls.id;
+        existingItem.class = cls;
+      }
     }
 
-    if (updateDto.teacherGuidePage !== undefined) {
-      existingItem.teacherGuidePage = updateDto.teacherGuidePage ?? null;
-    }
-
-    if (updateDto.itemInstruction !== undefined) {
-      existingItem.itemInstruction = updateDto.itemInstruction ?? null;
-    }
-
-    if (updateDto.imageUrl !== undefined) {
-      existingItem.imageUrl = updateDto.imageUrl ?? null;
-    }
-
-    if (updateDto.sortOrder !== undefined) {
-      existingItem.sortOrder = updateDto.sortOrder;
-    }
-
+    if (updateDto.title !== undefined) existingItem.title = updateDto.title;
+    if (updateDto.teacherGuidePage !== undefined) existingItem.teacherGuidePage = updateDto.teacherGuidePage ?? null;
+    if (updateDto.itemInstruction !== undefined) existingItem.itemInstruction = updateDto.itemInstruction ?? null;
+    if (updateDto.imageUrl !== undefined) existingItem.imageUrl = updateDto.imageUrl ?? null;
+    if (updateDto.sortOrder !== undefined) existingItem.sortOrder = updateDto.sortOrder;
     existingItem.score = updateDto.score;
 
     const savedItem = await this.teacherHomeworkItemRepo.save(existingItem);
     await this.refreshTotalScore(existingItem.teacherHomeworkId);
-
     return this.findItem(savedItem.id);
   }
 
   async removeItem(itemId: string): Promise<{ message: string }> {
     const item = await this.findItem(itemId);
     const homeworkId = item.teacherHomeworkId;
-
     await this.teacherHomeworkItemRepo.remove(item);
     await this.refreshTotalScore(homeworkId);
-
     return { message: 'Teacher homework item deleted successfully' };
   }
 
-  // ใช้ตอน create/update แบบทั่วไป:
-  // ถ้าไม่มี items เลย ให้ผ่านได้
-  // แต่ถ้ามี items แล้ว ทุก item ต้องมี score
   private validateAllItemsHaveScore(items: Array<{ score?: number | null }>) {
-    if (!items || items.length === 0) {
-      return;
-    }
-
-    const hasMissingScore = items.some(
-      (item) => item.score === null || item.score === undefined,
-    );
-
-    if (hasMissingScore) {
+    if (!items || items.length === 0) return;
+    if (items.some((item) => item.score === null || item.score === undefined)) {
       throw new BadRequestException('All homework items must have score');
     }
   }
 
-  // ใช้ตอน publish/sent:
-  // ต้องมีอย่างน้อย 1 item และทุก item ต้องมี score
   private validateCanPublish(items: Array<{ score?: number | null }>) {
     if (!items || items.length === 0) {
-      throw new BadRequestException(
-        'Cannot send homework without at least one item',
-      );
+      throw new BadRequestException('Cannot send homework without at least one item');
     }
-
     this.validateAllItemsHaveScore(items);
   }
 
   private calculateTotalScore(items: Array<{ score?: number | null }>): number {
-    if (!items || items.length === 0) {
-      return 0;
-    }
-
+    if (!items || items.length === 0) return 0;
     return items.reduce((sum, item) => sum + (item.score ?? 0), 0);
   }
 
@@ -368,11 +354,7 @@ export class TeacherHomeworkService {
       where: { id: homeworkId },
       relations: ['items'],
     });
-
-    if (!homework) {
-      return;
-    }
-
+    if (!homework) return;
     homework.totalScore = this.calculateTotalScore(homework.items);
     await this.teacherHomeworkRepo.save(homework);
   }

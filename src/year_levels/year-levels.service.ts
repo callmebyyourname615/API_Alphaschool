@@ -1,6 +1,5 @@
 import {
   Injectable,
-  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -26,11 +25,17 @@ async create(dto: CreateYearLevelDto): Promise<YearLevel> {
 }
 
   async findAll(): Promise<YearLevel[]> {
-    return this.repo.find({ relations: ['level'] });
+    return this.repo.find({
+      where: { is_deleted: false },
+      relations: ['level'],
+    });
   }
 
   async findOne(id: string): Promise<YearLevel | null> {
-    return this.repo.findOne({ where: { id }, relations: ['level'] });
+    return this.repo.findOne({
+      where: { id, is_deleted: false },
+      relations: ['level'],
+    });
   }
 
   async update(id: string, dto: UpdateYearLevelDto): Promise<YearLevel> {
@@ -64,6 +69,9 @@ async create(dto: CreateYearLevelDto): Promise<YearLevel> {
       throw new NotFoundException(`Year level with ID ${id} not found`);
     }
 
-    await this.repo.remove(yearLevel);
+    await this.repo.update(id, {
+      is_deleted: true,
+      is_active: false,
+    });
   }
 }

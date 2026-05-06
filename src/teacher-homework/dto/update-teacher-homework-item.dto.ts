@@ -3,6 +3,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
   Min,
 } from 'class-validator';
@@ -36,4 +37,8 @@ export class UpdateTeacherHomeworkItemDto {
   @IsInt()
   @Min(0)
   score: number;
+
+  @IsOptional() // ✅ new
+  @IsUUID()
+  classId?: string | null;
 }

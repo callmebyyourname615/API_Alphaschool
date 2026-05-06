@@ -204,7 +204,7 @@ export class ParticipationScoreService {
     console.log('scoreRecord', scoreRecord);
 
     const students = await this.studentRepo.find({
-      where: { class: { id: filter.classId } },
+      where: { enrollments: { class: { id: filter.classId } } },
       select: ['id', 'first_name', 'last_name'],
       order: { first_name: 'ASC', last_name: 'ASC' },
     });

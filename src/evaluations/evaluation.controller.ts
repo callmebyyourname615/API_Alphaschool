@@ -1,6 +1,6 @@
 import { Controller, Post, Body, Get, Param, Patch, Delete, ParseIntPipe } from '@nestjs/common';
 import { EvaluationService } from './evaluation.service';
-import type { CreateEvaluationDto } from './evaluation.service';
+import { CreateEvaluationDto } from './dto/create-evaluation.dto';
 import { Evaluation } from './evaluation.entity';
 
 @Controller('evaluations')

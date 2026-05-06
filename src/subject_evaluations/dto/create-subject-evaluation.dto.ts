@@ -1,4 +1,4 @@
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { IsString, IsUUID, IsOptional, IsArray, ValidateNested } from 'class-validator';
 
 export class ContentDto {
@@ -20,8 +20,13 @@ export class ContentDto {
 }
 
 export class CreateSubjectEvaluationDto {
+  @Transform(({ value, obj }) => value || obj.lessonId)
   @IsUUID()
-  subject_id: string;
+  lesson_id: string;
+
+  @IsOptional()
+  @IsUUID()
+  lessonId?: string;
 
   @IsString()
   topic: string;

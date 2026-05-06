@@ -17,6 +17,11 @@ import { GetStudentsByDateRangeDto } from './dto/get-students-by-date-range.dto'
 
 @Injectable()
 export class AttendancesService {
+  private readonly pendingAbsentReason = 'No QR scan yet';
+  private readonly pendingAbsentRemark = 'Default absent';
+  private readonly autoAbsentReason = 'No QR scan before 08:30';
+  private readonly autoAbsentRemark = 'Auto absent';
+
   constructor(
     @InjectRepository(Attendance)
     private readonly attendanceRepository: Repository<Attendance>,
@@ -94,27 +99,154 @@ export class AttendancesService {
     return this.toSeconds(time) >= this.toSeconds('08:30:00');
   }
 
+  private getDefaultAbsentStatus(date = new Date()) {
+    if (this.hasMorningDeadlinePassed(this.getLocalTime(date))) {
+      return {
+        type: AttendanceType.ABSENT,
+        scan_method: ScanMethod.MANUAL,
+        reason: this.autoAbsentReason,
+        remark: this.autoAbsentRemark,
+      };
+    }
+
+    return {
+      type: AttendanceType.ABSENT,
+      scan_method: ScanMethod.MANUAL,
+      reason: this.pendingAbsentReason,
+      remark: this.pendingAbsentRemark,
+    };
+  }
+
+  private async seedDailyAbsentees(date = new Date()): Promise<{
+    date: string;
+    created: number;
+  }> {
+    const today = this.getLocalDate(date);
+    const defaultAbsentStatus = this.getDefaultAbsentStatus(date);
+
+    const allStudents = await this.studentRepository.find({
+      where: { is_deleted: false },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!allStudents.length) {
+      return {
+        date: today,
+        created: 0,
+      };
+    }
+
+    const existingAttendances = await this.attendanceRepository.find({
+      where: { attendance_date: today },
+      select: {
+        student_id: true,
+      },
+    });
+
+    const existingStudentIds = new Set(
+      existingAttendances.map((item) => item.student_id),
+    );
+
+    const absentRows = allStudents
+      .filter((student) => !existingStudentIds.has(student.id))
+      .map((student) => ({
+        student_id: student.id,
+        attendance_date: today,
+        ...defaultAbsentStatus,
+      }));
+
+    if (!absentRows.length) {
+      return {
+        date: today,
+        created: 0,
+      };
+    }
+
+    await this.attendanceRepository
+      .createQueryBuilder()
+      .insert()
+      .into(Attendance)
+      .values(absentRows)
+      .orIgnore()
+      .execute();
+
+    return {
+      date: today,
+      created: absentRows.length,
+    };
+  }
+
+  private async finalizeDailyAbsentees(date = new Date()): Promise<{
+    date: string;
+    updated: number;
+  }> {
+    const today = this.getLocalDate(date);
+
+    if (!this.hasMorningDeadlinePassed(this.getLocalTime(date))) {
+      return {
+        date: today,
+        updated: 0,
+      };
+    }
+
+    const todayAbsences = await this.attendanceRepository.find({
+      where: {
+        attendance_date: today,
+        type: AttendanceType.ABSENT,
+      },
+    });
+
+    const staleAbsences = todayAbsences.filter(
+      (attendance) =>
+        !attendance.check_in &&
+        (attendance.scan_method !== ScanMethod.MANUAL ||
+          attendance.reason !== this.autoAbsentReason ||
+          attendance.remark !== this.autoAbsentRemark),
+    );
+
+    if (!staleAbsences.length) {
+      return {
+        date: today,
+        updated: 0,
+      };
+    }
+
+    staleAbsences.forEach((attendance) => {
+      attendance.scan_method = ScanMethod.MANUAL;
+      attendance.reason = this.autoAbsentReason;
+      attendance.remark = this.autoAbsentRemark;
+    });
+
+    await this.attendanceRepository.save(staleAbsences);
+
+    return {
+      date: today,
+      updated: staleAbsences.length,
+    };
+  }
+
   private async ensureDailyAbsenteesIfNeeded(): Promise<void> {
     const now = new Date();
-    const nowTime = this.getLocalTime(now);
 
-    if (!this.isWeekday(now)) return;
-    if (!this.hasMorningDeadlinePassed(nowTime)) return;
-
-    await this.markDailyAbsentees();
+    await this.seedDailyAbsentees(now);
+    await this.finalizeDailyAbsentees(now);
   }
 
   private mapStudentStatus(student: any, attendance: any, today: string) {
+    const defaultAbsentStatus = this.getDefaultAbsentStatus();
+
     return {
       student,
       attendance_id: attendance?.id ?? null,
       attendance_date: today,
-      type: attendance?.type ?? AttendanceType.ABSENT,
-      scan_method: attendance?.scan_method ?? null,
+      type: attendance?.type ?? defaultAbsentStatus.type,
+      scan_method: attendance?.scan_method ?? defaultAbsentStatus.scan_method,
       check_in: attendance?.check_in ?? null,
       check_out: attendance?.check_out ?? null,
-      reason: attendance?.reason ?? 'No QR scan',
-      remark: attendance?.remark ?? 'Auto absent',
+      reason: attendance?.reason ?? defaultAbsentStatus.reason,
+      remark: attendance?.remark ?? defaultAbsentStatus.remark,
       marked_by_admin_id: attendance?.marked_by_admin_id ?? null,
     };
   }
@@ -209,6 +341,8 @@ export class AttendancesService {
       throw new BadRequestException('QR scan is only allowed Monday to Friday');
     }
 
+    await this.ensureDailyAbsenteesIfNeeded();
+
     const existing = await this.attendanceRepository.findOne({
       where: {
         student_id,
@@ -292,51 +426,22 @@ export class AttendancesService {
   }> {
     const now = new Date();
     const today = this.getLocalDate(now);
-    const nowTime = this.getLocalTime(now);
 
-    if (!this.isWeekday(now)) {
+    const { created } = await this.seedDailyAbsentees(now);
+    const { updated } = await this.finalizeDailyAbsentees(now);
+
+    if (!this.hasMorningDeadlinePassed(this.getLocalTime(now))) {
       return {
-        message: 'Auto absent skipped on weekend',
+        message:
+          created > 0
+            ? 'Daily attendance reset completed'
+            : 'Daily attendance already initialized',
         date: today,
-        created: 0,
+        created,
       };
     }
 
-    if (!this.hasMorningDeadlinePassed(nowTime)) {
-      return {
-        message: 'Auto absent not started yet',
-        date: today,
-        created: 0,
-      };
-    }
-
-    const allStudents = await this.studentRepository.find();
-    if (!allStudents.length) {
-      return {
-        message: 'No students found',
-        date: today,
-        created: 0,
-      };
-    }
-
-    const existingAttendances = await this.attendanceRepository.find({
-      where: { attendance_date: today },
-      select: {
-        id: true,
-        student_id: true,
-        attendance_date: true,
-      },
-    });
-
-    const existingStudentIds = new Set(
-      existingAttendances.map((item) => item.student_id),
-    );
-
-    const missingStudents = allStudents.filter(
-      (student) => !existingStudentIds.has(student.id),
-    );
-
-    if (!missingStudents.length) {
+    if (!created && !updated) {
       return {
         message: 'All students already have attendance records',
         date: today,
@@ -344,27 +449,19 @@ export class AttendancesService {
       };
     }
 
-    const absentRows = missingStudents.map((student) =>
-      this.attendanceRepository.create({
-        student_id: student.id,
-        attendance_date: today,
-        type: AttendanceType.ABSENT,
-        scan_method: ScanMethod.MANUAL,
-        reason: 'No QR scan before 08:30',
-        remark: 'Auto absent',
-      }),
-    );
-
-    await this.attendanceRepository.save(absentRows);
-
     return {
       message: 'Auto absent completed',
       date: today,
-      created: absentRows.length,
+      created,
     };
   }
 
-  @Cron('0 30 8 * * 1-5', { timeZone: 'Asia/Vientiane' })
+  @Cron('0 0 0 * * *', { timeZone: 'Asia/Vientiane' })
+  async handleDailyAttendanceReset() {
+    await this.seedDailyAbsentees();
+  }
+
+  @Cron('0 30 8 * * *', { timeZone: 'Asia/Vientiane' })
   async handleDailyAutoAbsent() {
     await this.markDailyAbsentees();
   }
@@ -378,6 +475,8 @@ export class AttendancesService {
   }
 
   async findAll(): Promise<Attendance[]> {
+    await this.ensureDailyAbsenteesIfNeeded();
+
     return await this.attendanceRepository.find({
       relations: {
         student: true,
@@ -568,6 +667,7 @@ export class AttendancesService {
     await this.ensureDailyAbsenteesIfNeeded();
 
     const today = this.getLocalDate();
+    const defaultAbsentStatus = this.getDefaultAbsentStatus();
 
     const students = await this.studentRepository
       .createQueryBuilder('student')
@@ -599,12 +699,13 @@ export class AttendancesService {
           class: student.classId,
           attendance: {
             attendance_id: attendance?.id ?? null,
-            type: attendance?.type ?? AttendanceType.ABSENT,
-            scan_method: attendance?.scan_method ?? null,
+            type: attendance?.type ?? defaultAbsentStatus.type,
+            scan_method:
+              attendance?.scan_method ?? defaultAbsentStatus.scan_method,
             check_in: attendance?.check_in ?? null,
             check_out: attendance?.check_out ?? null,
-            reason: attendance?.reason ?? 'No QR scan',
-            remark: attendance?.remark ?? 'Auto absent',
+            reason: attendance?.reason ?? defaultAbsentStatus.reason,
+            remark: attendance?.remark ?? defaultAbsentStatus.remark,
             marked_by_admin_id: attendance?.marked_by_admin_id ?? null,
           },
         };
@@ -733,7 +834,7 @@ export class AttendancesService {
           last_name: student.last_name,
           gender: student.gender,
           profile_image_path: student.profile_image_path,
-          class: student.class,
+          class: student.enrollments?.[0]?.class ?? null,
           summary: {
             present_count,
             absent_count,

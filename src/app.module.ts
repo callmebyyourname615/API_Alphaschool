@@ -41,6 +41,12 @@ import { SubjectEvaluationModule } from './subject_evaluations/subject-evaluatio
 import { ScheduleModule } from '@nestjs/schedule';
 import { TeachLearningModule } from './teach_learning/teach-learning.module';
 import { TeacherHomeworkModule } from './teacher-homework/teacher-homework.module';
+import { LessonModule } from './lesson/lesson.module';
+import { EnrollmentModule } from './enrollments/enrollment.module';
+import { ExaminationResultModule } from './examination_results/examination-result.module';
+import { TimetableModule } from './timetables/timetable.module';
+import { PayReceiveModule } from './pay_receivce/pay-receive.module';
+import { LeaveReasonModule } from './leave_reason/leave-reason.module';
 
 @Module({
   imports: [
@@ -62,6 +68,11 @@ import { TeacherHomeworkModule } from './teacher-homework/teacher-homework.modul
         database: config.get<string>('DB_NAME'),
         autoLoadEntities: true,
         synchronize: true,
+        connectTimeoutMS: 5000,
+        extra: {
+          connectionTimeoutMillis: 5000,
+          query_timeout: 30000,
+        },
       }),
     }),
 
@@ -103,6 +114,12 @@ import { TeacherHomeworkModule } from './teacher-homework/teacher-homework.modul
     SubjectEvaluationModule,
     TeachLearningModule,
     TeacherHomeworkModule,
+    LessonModule,
+    EnrollmentModule,
+    ExaminationResultModule,
+    TimetableModule,
+    PayReceiveModule,
+    LeaveReasonModule,
   ],
   providers: [],
   

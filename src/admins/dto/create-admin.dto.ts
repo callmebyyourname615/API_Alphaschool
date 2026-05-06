@@ -42,6 +42,10 @@ export class CreateAdminDto {
   phone?: string;
 
   @IsOptional()
+  @IsString()
+  tell?: string; // optional field for tell number
+
+  @IsOptional()
   @IsDateString()
   dob?: string;
 
@@ -67,16 +71,28 @@ export class CreateAdminDto {
 
   @IsOptional()
   @IsString()
+  profile_pic?: string;
+
+  @IsOptional()
+  @IsString()
+  home_picture_url?: string;
+
+  @IsOptional()
+  @IsString()
+  home_address?: string; // can be optional and stored as JSON string if complex
+
+  @IsOptional()
+  @IsString()
   current_academic_year?: string;
 
   @IsOptional()
   @IsArray()
   @IsUUID('4', { each: true })
-  role_ids?: string[];  // ← use role_ids, not roles
+  role_ids?: string[]; // ← use role_ids, not roles
 
   @IsOptional()
   @IsUUID()
-  branch_id?: string;  // ← add this
+  branch_id?: string; // ← add this
 
   @IsOptional()
   @IsBoolean()

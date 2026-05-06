@@ -1,128 +1,144 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Examination } from './examination.entity';
+import { Subject } from '../subjects/subject.entity';
 import { CreateExaminationDto } from './dto/create-examination.dto';
 import { UpdateExaminationDto } from './dto/update-examination.dto';
-import { Student } from '../students/student.entity';
-import { Subject } from '../subjects/subject.entity';
-import { Branch } from '../branches/branch.entity';
-import { Admin } from '../admins/admin.entity';
+import * as fs from 'fs';
+
+const RELATIONS = [
+  'branch',
+  'academicYear',
+  'class',
+  'subject',
+  'subject.lessons',
+  'subject.lessons.subjectType',
+  'subject.lessons.yearLevel',
+  'subject.lessons.curriculums',
+];
 
 @Injectable()
 export class ExaminationService {
   constructor(
     @InjectRepository(Examination)
-    private readonly examRepo: Repository<Examination>,
-    @InjectRepository(Branch)
-    private readonly branchRepo: Repository<Branch>,
-    @InjectRepository(Student)
-    private readonly studentRepo: Repository<Student>,
+    private readonly examinationRepository: Repository<Examination>,
     @InjectRepository(Subject)
-    private readonly subjectRepo: Repository<Subject>,
-    @InjectRepository(Admin)
-    private readonly adminRepo: Repository<Admin>,
+    private readonly subjectRepository: Repository<Subject>,
   ) {}
 
-  // CREATE
-  async create(dto: CreateExaminationDto) {
-    const branch = await this.branchRepo.findOne({
-      where: { id: dto.branch_id },
-    });
-    const student = await this.studentRepo.findOne({
-      where: { id: dto.student_id },
-    });
-    const subject = await this.subjectRepo.findOne({
-      where: { id: String(dto.subject_id) },
-    });
+  async create(
+    dto: CreateExaminationDto,
+    files: { exam_file?: Express.Multer.File[] },
+  ): Promise<Examination> {
+    const maxScore = dto.maxScore ?? 100;
+    const passScore = dto.passScore ?? 50;
 
-    const admin = dto.admin_id
-      ? await this.adminRepo.findOne({ where: { id: dto.admin_id } })
-      : null;
+    if (passScore > maxScore) {
+      throw new BadRequestException('pass_score cannot exceed max_score');
+    }
 
-    if (!branch) throw new NotFoundException('Branch not found');
-    if (!student) throw new NotFoundException('Student not found');
-    if (!subject) throw new NotFoundException('Subject not found');
+    // Validate subject exists
+    const subject = await this.subjectRepository.findOne({
+      where: { id: dto.subjectId },
+    });
+    if (!subject) {
+      throw new NotFoundException(`Subject ${dto.subjectId} not found`);
+    }
 
-    const exam = this.examRepo.create({
-      branch,
-      academic_year: dto.academic_year,
-      student,
-      subject,
-      admin: admin ?? undefined,
-      score: dto.score,
-      label: dto.label,
+    const examination = this.examinationRepository.create({
+      ...dto,
+      maxScore,
+      passScore,
+      examFile: files.exam_file?.[0]?.path ?? null,
     });
 
-    return this.examRepo.save(exam);
+    const saved = await this.examinationRepository.save(examination);
+    return this.findOne(saved.id);
   }
 
-  // GET ALL
-  findAll() {
-    return this.examRepo.find({
-      relations: ['branch', 'student', 'subject', 'admin'],
+  async findAll(): Promise<Examination[]> {
+    return this.examinationRepository.find({
+      where: { isDeleted: false },
+      relations: RELATIONS,
+      order: { examDate: 'ASC' },
     });
   }
 
-  // GET BY ID
-  async findOne(id: string) {
-    const exam = await this.examRepo.findOne({
-      where: { id },
-      relations: ['branch', 'student', 'subject', 'admin'],
+  async findOne(id: string): Promise<Examination> {
+    const examination = await this.examinationRepository.findOne({
+      where: { id, isDeleted: false },
+      relations: RELATIONS,
     });
 
-    if (!exam) throw new NotFoundException('Examination not found');
-    return exam;
+    if (!examination) {
+      throw new NotFoundException(`Examination with ID ${id} not found`);
+    }
+
+    return examination;
   }
 
-  // UPDATE
-  async update(id: string, dto: UpdateExaminationDto) {
-  const exam = await this.findOne(id);
-
-  if (dto.branch_id) {
-    const branch = await this.branchRepo.findOne({
-      where: { id: dto.branch_id }, // branch = uuid ✔
+  async findByClass(classId: string): Promise<Examination[]> {
+    return this.examinationRepository.find({
+      where: { classId, isDeleted: false },
+      relations: RELATIONS,
+      order: { examDate: 'ASC' },
     });
-    if (!branch) throw new NotFoundException('Branch not found');
-    exam.branch = branch;
   }
 
-  if (dto.student_id) {
-    const student = await this.studentRepo.findOne({
-      where: { id: dto.student_id }, // student = uuid ✔
+  async findByAcademicYear(academicYearId: string): Promise<Examination[]> {
+    return this.examinationRepository.find({
+      where: { academicYearId, isDeleted: false },
+      relations: RELATIONS,
+      order: { examDate: 'ASC' },
     });
-    if (!student) throw new NotFoundException('Student not found');
-    exam.student = student;
   }
 
-  if (dto.subject_id) {
-    const subject = await this.subjectRepo.findOne({
-      where: { id: String(dto.subject_id) }, // 🔥 subject = number
-    });
-    if (!subject) throw new NotFoundException('Subject not found');
-    exam.subject = subject;
+  async update(
+    id: string,
+    dto: UpdateExaminationDto,
+    files: { exam_file?: Express.Multer.File[] },
+  ): Promise<Examination> {
+    const examination = await this.findOne(id);
+
+    const maxScore = dto.maxScore ?? Number(examination.maxScore);
+    const passScore = dto.passScore ?? Number(examination.passScore);
+
+    if (passScore > maxScore) {
+      throw new BadRequestException('pass_score cannot exceed max_score');
+    }
+
+    // Validate subject if changed
+    if (dto.subjectId && dto.subjectId !== examination.subjectId) {
+      const subject = await this.subjectRepository.findOne({
+        where: { id: dto.subjectId },
+      });
+      if (!subject) {
+        throw new NotFoundException(`Subject ${dto.subjectId} not found`);
+      }
+    }
+
+    // Replace old file if new one uploaded
+    if (files.exam_file?.[0]) {
+      if (examination.examFile && fs.existsSync(examination.examFile)) {
+        fs.unlinkSync(examination.examFile);
+      }
+      examination.examFile = files.exam_file[0].path;
+    }
+
+    Object.assign(examination, dto);
+    await this.examinationRepository.save(examination);
+    return this.findOne(id);
   }
 
-  if (dto.admin_id) {
-    const admin = await this.adminRepo.findOne({
-      where: { id: dto.admin_id }, // admin = uuid ✔
-    });
-    if (!admin) throw new NotFoundException('Admin not found');
-    exam.admin = admin;
-  }
-
-  exam.academic_year = dto.academic_year ?? exam.academic_year;
-  exam.score = dto.score ?? exam.score;
-  exam.label = dto.label ?? exam.label;
-  exam.updated_at = new Date();
-
-  return this.examRepo.save(exam);
-}
-
-
-  // DELETE
-  async remove(id: string) {
-    const exam = await this.findOne(id);
-    return this.examRepo.remove(exam);
+  async remove(id: string): Promise<{ message: string }> {
+    const examination = await this.findOne(id);
+    examination.isDeleted = true;
+    await this.examinationRepository.save(examination);
+    return { message: `Examination #${id} deleted successfully` };
   }
 }

@@ -3,72 +3,108 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
+  JoinColumn,
   CreateDateColumn,
   UpdateDateColumn,
-  JoinColumn,
 } from 'typeorm';
-import { Student } from '../students/student.entity';
-import { Subject } from '../subjects/subject.entity';
-import { Admin } from '../admins/admin.entity';
+import { AcademicYear } from '../academic_years/academic-year.entity';
+import { Class } from '../classes/class.entity';
 import { Branch } from '../branches/branch.entity';
+import { Subject } from '../subjects/subject.entity';
 
 @Entity('examinations')
 export class Examination {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // -----------------------------
-  // Branch relation
-  // -----------------------------
-  @ManyToOne(() => Branch, { nullable: true })
+  // =========================
+  // FK: Branch
+  // =========================
+  @Column('uuid', { name: 'branch_id' })
+  branchId: string;
+
+  @ManyToOne(() => Branch, { nullable: false, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'branch_id' })
   branch: Branch;
 
-  // -----------------------------
-  // Academic year
-  // -----------------------------
-  @Column({ type: 'varchar', nullable: true })
-  academic_year: string | null;
+  // =========================
+  // FK: AcademicYear
+  // =========================
+  @Column('uuid', { name: 'academic_year_id' })
+  academicYearId: string;
 
-  // -----------------------------
-  // Student relation
-  // -----------------------------
-  @ManyToOne(() => Student, { nullable: true })
-  @JoinColumn({ name: 'student_id' })
-  student: Student;
+  @ManyToOne(() => AcademicYear, { nullable: false, onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'academic_year_id' })
+  academicYear: AcademicYear;
 
-  // -----------------------------
-  // Subject relation
-  // -----------------------------
-  @ManyToOne(() => Subject, { nullable: true })
+  // =========================
+  // FK: Class
+  // =========================
+  @Column('uuid', { name: 'class_id' })
+  classId: string;
+
+  @ManyToOne(() => Class, { nullable: false, onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'class_id' })
+  class: Class;
+
+  // =========================
+  // FK: Subject
+  // =========================
+  @Column('uuid', { name: 'subject_id' })
+  subjectId: string;
+
+  @ManyToOne(() => Subject, { nullable: false, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'subject_id' })
   subject: Subject;
 
-  // -----------------------------
-  // Admin relation (optional)
-  // -----------------------------
-  @ManyToOne(() => Admin, { nullable: true })
-  @JoinColumn({ name: 'admin_id' })
-  admin: Admin | null;
+  // =========================
+  // BASIC FIELDS
+  // =========================
+  @Column({ type: 'varchar', length: 255 })
+  title: string;
 
-  // -----------------------------
-  // Score (optional)
-  // -----------------------------
-  @Column({ type: 'int', nullable: true })
-  score: number | null;
+  @Column({ type: 'text', nullable: true })
+  description: string | null;
 
-  // -----------------------------
-  // Label (optional)
-  // -----------------------------
-  @Column({ type: 'varchar', nullable: true })
-  label: string | null;
+  @Column({ type: 'timestamptz', name: 'exam_date' })
+  examDate: Date;
 
-  // -----------------------------
-  // Timestamps
-  // -----------------------------
-  @CreateDateColumn()
-  created_at: Date;
+  @Column({ type: 'int', name: 'duration_minutes' })
+  durationMinutes: number;
 
-  @UpdateDateColumn()
-  updated_at: Date;
+  @Column({
+    type: 'numeric',
+    precision: 5,
+    scale: 2,
+    name: 'max_score',
+    default: 100,
+  })
+  maxScore: number;
+
+  @Column({
+    type: 'numeric',
+    precision: 5,
+    scale: 2,
+    name: 'pass_score',
+    default: 50,
+  })
+  passScore: number;
+
+  @Column({ default: false, name: 'is_deleted' })
+  isDeleted: boolean;
+
+  // =========================
+  // FILE FIELDS
+  // =========================
+  @Column({ type: 'varchar', length: 255, nullable: true, name: 'exam_file' })
+  examFile: string | null;
+
+  // =========================
+  // TIMESTAMPS
+  // =========================
+  @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
+  createdAt: Date;
+
+  @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
+  updatedAt: Date;
 }

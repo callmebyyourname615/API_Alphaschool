@@ -19,13 +19,14 @@ export class SubjectTypeService {
 
   async findAll(): Promise<SubjectType[]> {
     return await this.subjectTypeRepo.find({
-      order: { id: 'DESC' },
+      where: { is_deleted: false },
+      order: { created_at: 'DESC' },
     });
   }
 
   async findOne(id: string): Promise<SubjectType> {
     const subjectType = await this.subjectTypeRepo.findOne({
-      where: { id },
+      where: { id, is_deleted: false },
     });
 
     if (!subjectType) {

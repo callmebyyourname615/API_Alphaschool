@@ -3,22 +3,12 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Examination } from './examination.entity';
 import { ExaminationService } from './examination.service';
 import { ExaminationController } from './examination.controller';
-import { Student } from '../students/student.entity';
 import { Subject } from '../subjects/subject.entity';
-import { Branch } from '../branches/branch.entity';
-import { Admin } from '../admins/admin.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([
-      Examination,
-      Branch,
-      Student,
-      Subject,
-      Admin,
-    ]),
-  ],
+  imports: [TypeOrmModule.forFeature([Examination, Subject])],
   controllers: [ExaminationController],
   providers: [ExaminationService],
+  exports: [ExaminationService],
 })
 export class ExaminationModule {}

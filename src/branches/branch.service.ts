@@ -21,6 +21,61 @@ export class BranchService {
     private readonly subjectRepo: Repository<Subject>,
   ) {}
 
+  private readonly branchSubjectRelations = [
+    'subjects',
+    'subjects.lessons',
+    'subjects.lessons.subjectType',
+  ] as const;
+
+  private getLessonTimestamp(
+    lesson:
+      | {
+          updatedAt?: Date;
+          createdAt?: Date;
+        }
+      | null
+      | undefined,
+  ): number {
+    const parsed = new Date(
+      lesson?.updatedAt || lesson?.createdAt || 0,
+    ).getTime();
+
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+  }
+
+  private hasVisibleSubjectType(subject: Subject | null | undefined): boolean {
+    const lessons = Array.isArray(subject?.lessons) ? [...subject.lessons] : [];
+
+    lessons.sort(
+      (left, right) =>
+        this.getLessonTimestamp(right) - this.getLessonTimestamp(left),
+    );
+
+    return lessons.some((lesson) => {
+      const subjectType = lesson?.subjectType as
+        | { name?: string; is_deleted?: boolean }
+        | undefined;
+      const name = String(subjectType?.name || '').trim();
+
+      return (
+        !!name &&
+        name !== 'Untitled Subject' &&
+        subjectType?.is_deleted !== true
+      );
+    });
+  }
+
+  private filterBranchSubjects(branch: Branch): Branch {
+    branch.subjects = Array.isArray(branch.subjects)
+      ? branch.subjects.filter(
+          (subject) =>
+            subject?.is_deleted !== true && this.hasVisibleSubjectType(subject),
+        )
+      : [];
+
+    return branch;
+  }
+
   async create(
     dto: CreateBranchDto,
     file?: Express.Multer.File,
@@ -110,17 +165,21 @@ export class BranchService {
     return await this.branchRepo.save(branch);
   }
   async findAll(): Promise<Branch[]> {
-    return this.branchRepo.find({
+    const branches = await this.branchRepo.find({
       where: { is_deleted: false },
-      relations: ['subjects'],
+      relations: [...this.branchSubjectRelations],
       order: { created_at: 'DESC' },
     });
+
+    return branches.map((branch) => this.filterBranchSubjects(branch));
   }
 
   async findOne(id: string): Promise<Branch> {
     const branch = await this.branchRepo
       .createQueryBuilder('branch')
       .leftJoinAndSelect('branch.subjects', 'subject')
+      .leftJoinAndSelect('subject.lessons', 'lesson')
+      .leftJoinAndSelect('lesson.subjectType', 'lessonSubjectType')
       .leftJoinAndMapOne(
         'branch.academic_year',
         AcademicYear,
@@ -131,7 +190,7 @@ export class BranchService {
       .getOne();
 
     if (!branch) throw new NotFoundException('Branch not found');
-    return branch;
+    return this.filterBranchSubjects(branch);
   }
 
   async update(

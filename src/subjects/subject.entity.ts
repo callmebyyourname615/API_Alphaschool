@@ -5,87 +5,84 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   ManyToOne,
-  JoinColumn,
   ManyToMany,
   OneToMany,
+  JoinColumn,
+  JoinTable,
 } from 'typeorm';
 
 import { Class } from '../classes/class.entity';
-import { Curriculum } from '../curriculums/curriculum.entity';
 import { Branch } from '../branches/branch.entity';
 import { SubjectEvaluation } from '../subject_evaluations/subject-evaluation.entity';
 import { Teaching } from '../teachings/teaching.entity';
-import { SubjectType } from '../subject_types/subject-type.entity';
 import { TeachLearning } from '../teach_learning/teach-learning.entity';
+import { Lesson } from '../lesson/lesson.entity';
+import { SubjectType } from '../subject_types/subject-type.entity';
 
 @Entity('subjects')
 export class Subject {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // Link to real name
-  // In Subject entity
-  @Column({ type: 'uuid', nullable: true }) // ← Change to true for now
-  subject_type_id: string;
+  // =========================
+  // FK: Class
+  // =========================
+  @Column({ type: 'uuid', nullable: true, name: 'class_id' })
+  class_id: string | null;
 
-  @ManyToOne(() => SubjectType, (subjectType) => subjectType.subjects, {
+  @ManyToOne(() => Class, (cls) => cls.subjects, {
     nullable: true,
+    onDelete: 'RESTRICT',
   })
+  @JoinColumn({ name: 'class_id' })
+  class: Class | null;
+
+  @Column({ type: 'uuid', nullable: true, name: 'subject_type_id' })
+  subjectTypeId: string | null;
+
+  @ManyToOne(() => SubjectType, { nullable: true, onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'subject_type_id' })
   subjectType: SubjectType | null;
 
-  // Other important relations
-  @Column({ type: 'uuid', nullable: true })
-  curriculum_id: string;
+  // =========================
+  // MANY-TO-MANY: Lesson
+  // Subject links to many lessons after they are created
+  // =========================
+  @ManyToMany(() => Lesson, { cascade: true, eager: false })
+  @JoinTable({
+    name: 'subject_lessons',                                    // ✅ join table
+    joinColumn:        { name: 'subject_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'lesson_id',  referencedColumnName: 'id' },
+  })
+  lessons: Lesson[];
 
-  @ManyToOne(() => Curriculum, { nullable: true })
-  @JoinColumn({ name: 'curriculum_id' })
-  curriculum: Curriculum | null;
-
-  @Column({ type: 'uuid', nullable: true })
-  class_id: string;
-
-  @ManyToOne(() => Class, { nullable: true, onDelete: 'RESTRICT' })
-  @JoinColumn({ name: 'class_id' })
-  class: Class;
-
-  // Materials (can be different per class/branch if needed)
-  @Column({ type: 'text', nullable: true })
-  file_s: string | null;
-
-  @Column({ type: 'text', nullable: true })
-  s_year: string | null;
-
-  @Column({ type: 'text', nullable: true })
-  file_t: string | null;
-
-  @Column({ type: 'text', nullable: true })
-  t_year: string | null;
-
-  @Column({ type: 'text', nullable: true })
-  file_e: string | null;
-
+  // =========================
+  // STATUS
+  // =========================
   @Column({ default: true })
   is_active: boolean;
 
   @Column({ default: false })
   is_deleted: boolean;
 
+  // =========================
+  // TIMESTAMPS
+  // =========================
   @CreateDateColumn({ name: 'create_dt' })
   create_dt: Date;
 
   @UpdateDateColumn({ name: 'update_dt' })
   update_dt: Date;
 
+  // =========================
+  // RELATIONS
+  // =========================
   @ManyToMany(() => Branch, (branch) => branch.subjects)
   branches: Branch[];
-
-  @OneToMany(() => SubjectEvaluation, (evaluation) => evaluation.subject)
-  evaluations: SubjectEvaluation[];
 
   @OneToMany(() => Teaching, (teaching) => teaching.subject)
   teachings: Teaching[];
 
   @OneToMany(() => TeachLearning, (teachLearning) => teachLearning.subject)
-teachLearnings: TeachLearning[];
+  teachLearnings: TeachLearning[];
 }

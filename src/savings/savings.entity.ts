@@ -12,6 +12,7 @@ import { Student } from '../students/student.entity';
 import { Class } from '../classes/class.entity';
 import { Branch } from '../branches/branch.entity';
 import { AcademicYear } from '../academic_years/academic-year.entity';
+import { Admin } from '../admins/admin.entity';
 
 export enum SavingOwnerType {
   STUDENT = 'STUDENT',
@@ -67,6 +68,14 @@ export class Saving {
 
   @Column({ type: 'uuid', nullable: true })
   academic_year_id?: string | null;
+
+  // ── Teacher / Employee who created this saving ────────────────────────────
+  @ManyToOne(() => Admin, { nullable: false, eager: false })
+  @JoinColumn({ name: 'created_by' })
+  createdBy: Admin;
+
+  @Column({ type: 'uuid', name: 'created_by', nullable: true })
+  created_by: string;
 
   @Column({
     type: 'enum',

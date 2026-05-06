@@ -9,59 +9,80 @@ import {
   UploadedFiles,
   UseInterceptors,
   BadRequestException,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import { extname } from 'path';
+import { v4 as uuid } from 'uuid';
 import { ParentService } from './parent.service';
 import { CreateParentDto } from './dto/CreateParentDto';
 import { UpdateParentDto } from './dto/UpdateParentDto';
-import { v4 as uuid } from 'uuid';
+
+const fileInterceptorOptions = {
+  storage: diskStorage({
+    destination: './uploads/parents',
+    filename: (_req, file, cb) => {
+      cb(null, `${uuid()}${extname(file.originalname)}`);
+    },
+  }),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowedImages = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
+    const allowedDocs = ['.pdf'];
+    const ext = extname(file.originalname).toLowerCase();
+
+    // family_book only allows PDF, others only images
+    if (file.fieldname === 'family_book') {
+      if (!allowedDocs.includes(ext)) {
+        return cb(
+          new BadRequestException(`family_book must be a PDF file`),
+          false,
+        );
+      }
+    } else {
+      if (!allowedImages.includes(ext)) {
+        return cb(
+          new BadRequestException(
+            `File type '${ext}' not allowed. Allowed: ${allowedImages.join(', ')}`,
+          ),
+          false,
+        );
+      }
+    }
+    cb(null, true);
+  },
+};
+
+const fileFields = [
+  { name: 'profile_pic', maxCount: 1 },
+  { name: 'id_card', maxCount: 1 },
+  { name: 'home_picture', maxCount: 1 }, // ✅
+  { name: 'family_book', maxCount: 1 }, // ✅
+];
 
 @Controller('parents')
 export class ParentController {
   constructor(private readonly service: ParentService) {}
 
-  // POST - create parent with profile_pic + id_card
   @Post()
-  @UseInterceptors(
-    FileFieldsInterceptor(
-      [
-        { name: 'profile_pic', maxCount: 1 },
-        { name: 'id_card', maxCount: 1 },
-      ],
-      {
-        storage: diskStorage({
-          destination: './uploads/parents',
-          filename: (req, file, cb) => {
-            const uniqueSuffix =
-              Date.now() + '-' + Math.round(Math.random() * 1e9);
-            const ext = extname(file.originalname);
-            cb(null, file.fieldname + '-' + uniqueSuffix + ext);
-          },
-        }),
-        limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
-        fileFilter: (req, file, cb) => {
-          const allowed = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
-          const ext = extname(file.originalname).toLowerCase();
-          if (!allowed.includes(ext)) {
-            return cb(new BadRequestException(`File type '${ext}' not allowed. Allowed: ${allowed.join(', ')}`), false);
-          }
-          cb(null, true);
-        },
-      },
-    ),
-  )
+  @UseInterceptors(FileFieldsInterceptor(fileFields, fileInterceptorOptions))
   create(
     @Body() dto: CreateParentDto,
     @UploadedFiles()
     files: {
       profile_pic?: Express.Multer.File[];
       id_card?: Express.Multer.File[];
+      home_picture?: Express.Multer.File[]; // ✅
+      family_book?: Express.Multer.File[]; // ✅
     },
   ) {
     if (files?.profile_pic?.[0]) dto.profile_pic = files.profile_pic[0].path;
     if (files?.id_card?.[0]) dto.id_card = files.id_card[0].path;
+    if (files?.home_picture?.[0])
+      dto.home_picture_url = files.home_picture[0].path; // ✅
+    if (files?.family_book?.[0])
+      dto.family_book_url = files.family_book[0].path; // ✅
     return this.service.create(dto);
   }
 
@@ -71,58 +92,34 @@ export class ParentController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.findOne(id);
   }
 
   @Put(':id')
-  @UseInterceptors(
-    FileFieldsInterceptor(
-      [
-        { name: 'profile_pic', maxCount: 1 },
-        { name: 'id_card', maxCount: 1 },
-      ],
-      {
-        storage: diskStorage({
-          destination: './uploads/parents',
-          filename: (req, file, cb) => {
-            const fileName = `${uuid()}${extname(file.originalname)}`;
-            cb(null, fileName);
-          },
-        }),
-        limits: { fileSize: 5 * 1024 * 1024 }, // 5MB
-        fileFilter: (req, file, cb) => {
-          const allowed = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
-          const ext = extname(file.originalname).toLowerCase();
-          if (!allowed.includes(ext)) {
-            return cb(new BadRequestException(`File type '${ext}' not allowed. Allowed: ${allowed.join(', ')}`), false);
-          }
-          cb(null, true);
-        },
-      },
-    ),
-  )
-  async update(
-    @Param('id') id: string,
+  @UseInterceptors(FileFieldsInterceptor(fileFields, fileInterceptorOptions))
+  update(
+    @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateParentDto,
     @UploadedFiles()
     files: {
       profile_pic?: Express.Multer.File[];
       id_card?: Express.Multer.File[];
+      home_picture?: Express.Multer.File[]; // ✅
+      family_book?: Express.Multer.File[]; // ✅
     },
   ) {
-    if (files.profile_pic && files.profile_pic.length > 0) {
-      dto.profile_pic = files.profile_pic[0].path;
-    }
-    if (files.id_card && files.id_card.length > 0) {
-      dto.id_card = files.id_card[0].path;
-    }
-
+    if (files?.profile_pic?.[0]) dto.profile_pic = files.profile_pic[0].path;
+    if (files?.id_card?.[0]) dto.id_card = files.id_card[0].path;
+    if (files?.home_picture?.[0])
+      dto.home_picture_url = files.home_picture[0].path; // ✅
+    if (files?.family_book?.[0])
+      dto.family_book_url = files.family_book[0].path; // ✅
     return this.service.update(id, dto);
   }
 
   @Delete(':id')
-  delete(@Param('id') id: string) {
+  delete(@Param('id', ParseUUIDPipe) id: string) {
     return this.service.softDelete(id);
   }
 }

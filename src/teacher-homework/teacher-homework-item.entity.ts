@@ -8,6 +8,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { TeacherHomework } from './teacher-homework.entity';
+import { Class } from '../classes/class.entity'; // ✅ new
 
 @Entity('teacher_homework_item')
 export class TeacherHomeworkItem {
@@ -23,6 +24,19 @@ export class TeacherHomeworkItem {
   })
   @JoinColumn({ name: 'teacher_homework_id' })
   teacherHomework: TeacherHomework;
+
+  // =========================
+  // FK: Class ✅ new
+  // =========================
+  @Column('uuid', { name: 'class_id', nullable: true })
+  classId: string | null;
+
+  @ManyToOne(() => Class, (cls) => cls.teacherHomeworkItems, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'class_id' })
+  class: Class | null;
 
   @Column({ type: 'varchar', length: 255 })
   title: string;

@@ -1,15 +1,79 @@
-import { Controller, Post, Get, Put, Delete, Param, Body } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Put,
+  Delete,
+  Param,
+  Body,
+  UploadedFiles,
+  UseInterceptors,
+  BadRequestException,
+} from '@nestjs/common';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 import { ExaminationService } from './examination.service';
 import { CreateExaminationDto } from './dto/create-examination.dto';
 import { UpdateExaminationDto } from './dto/update-examination.dto';
+import { compressPdf } from '../common/utils/compress-pdf.util';
+
+const MAX_FILE_SIZE = Infinity;
+
+const storage = diskStorage({
+  destination: './uploads/examinations',
+  filename: (_, file, cb) =>
+    cb(null, `${Date.now()}${extname(file.originalname)}`),
+});
+
+const fileInterceptorOptions = {
+  storage,
+  limits: {
+    fileSize: MAX_FILE_SIZE,
+  },
+  fileFilter: (_, file, cb) => {
+    const allowedMimeTypes = [
+      'application/pdf',
+      'image/jpeg',
+      'image/png',
+      'image/jpg',
+    ];
+    if (allowedMimeTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new BadRequestException(`File type ${file.mimetype} is not allowed`), false);
+    }
+  },
+};
+
+async function compressUploadedPdfs(
+  files: { exam_file?: Express.Multer.File[] },
+): Promise<void> {
+  const allFiles = [...(files.exam_file ?? [])];
+  for (const file of allFiles) {
+    if (file.mimetype === 'application/pdf') {
+      await compressPdf(file.path);
+    }
+  }
+}
 
 @Controller('examinations')
 export class ExaminationController {
   constructor(private readonly service: ExaminationService) {}
 
   @Post()
-  create(@Body() dto: CreateExaminationDto) {
-    return this.service.create(dto);
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [{ name: 'exam_file', maxCount: 1 }],
+      fileInterceptorOptions,
+    ),
+  )
+  async create(
+    @Body() dto: CreateExaminationDto,
+    @UploadedFiles() files: { exam_file?: Express.Multer.File[] },
+  ) {
+    await compressUploadedPdfs(files ?? {});
+    return this.service.create(dto, files ?? {});
   }
 
   @Get()
@@ -23,8 +87,19 @@ export class ExaminationController {
   }
 
   @Put(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateExaminationDto) {
-    return this.service.update(id, dto);
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [{ name: 'exam_file', maxCount: 1 }],
+      fileInterceptorOptions,
+    ),
+  )
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateExaminationDto,
+    @UploadedFiles() files: { exam_file?: Express.Multer.File[] },
+  ) {
+    await compressUploadedPdfs(files ?? {});
+    return this.service.update(id, dto, files ?? {});
   }
 
   @Delete(':id')

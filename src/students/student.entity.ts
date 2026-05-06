@@ -14,44 +14,36 @@ import { Province } from '../location/province.entity';
 import { District } from '../location/district.entity';
 import { Parent } from '../parents/parent.entity';
 import { Task } from '../task/task.entity';
-import { ParticipationScore } from '../participantion_score/participation-score.entity';
-import { Class } from '../classes/class.entity';
 import { Attendance } from '../attendance/attendance.entity';
 import { Branch } from '../branches/branch.entity';
-import { AcademicYear } from '../academic_years/academic-year.entity';
 import { Saving } from '../savings/savings.entity';
+import { Enrollment } from '../enrollments/enrollment.entity';
 
 @Entity('students')
 export class Student {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Branch, { nullable: true })
-  branch: Branch;
+  // =========================
+  // FK: Branch
+  // =========================
+  @Column('uuid', { name: 'branch_id', nullable: true })
+  branchId: string | null;
 
-  @ManyToOne(() => AcademicYear, { nullable: true })
-  academicYear: AcademicYear;
+  @ManyToOne(() => Branch, { nullable: true, onDelete: 'RESTRICT' })
+  @JoinColumn({ name: 'branch_id' })
+  branch: Branch | null;
 
+  // =========================
+  // BASIC FIELDS
+  // =========================
   @Column({ type: 'varchar', length: 100 })
   student_id: string;
 
-  @ManyToOne(() => Class, { nullable: true })
-  @JoinColumn({ name: 'class_id' })
-  class: Class; // ← เปลี่ยนจาก classId เป็น class
-
-  @Column({ type: 'uuid', nullable: true })
-  class_id: string;
-
-  @ManyToOne(() => Province, { nullable: true })
-  province: Province;
-
-  @ManyToOne(() => District, { nullable: true })
-  district: District;
-
-  @Column({ type: 'varchar', length: 50 })
+  @Column({ type: 'varchar', length: 50, nullable: true })
   village_id: string;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   profile_image_path: string;
 
   @Column({ type: 'varchar', length: 255 })
@@ -66,22 +58,22 @@ export class Student {
   @Column({ type: 'varchar', length: 50 })
   gender: string;
 
-  @Column({ type: 'varchar', length: 100 })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   nationality: string;
 
-  @Column({ type: 'varchar', length: 100 })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   ethnicity: string;
 
-  @Column({ type: 'varchar', length: 100 })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   religion: string;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   live_with: string;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text', nullable: true })
   address: string;
 
-  @Column({ type: 'jsonb' })
+  @Column({ type: 'jsonb', nullable: true })
   emergency_contacts: any;
 
   @Column({ type: 'numeric', precision: 18, scale: 2, default: 0 })
@@ -93,6 +85,18 @@ export class Student {
   @Column({ default: false })
   is_deleted: boolean;
 
+  // =========================
+  // LOCATION
+  // =========================
+  @ManyToOne(() => Province, { nullable: true })
+  province: Province | null;
+
+  @ManyToOne(() => District, { nullable: true })
+  district: District | null;
+
+  // =========================
+  // RELATIONS
+  // =========================
   @ManyToMany(() => Parent, { cascade: true })
   @JoinTable({
     name: 'student_parents',
@@ -101,20 +105,26 @@ export class Student {
   })
   parents: Parent[];
 
-  @CreateDateColumn({ type: 'timestamptz' })
-  created_at: Date;
+  @OneToMany(() => Enrollment, (e) => e.student)
+  enrollments: Enrollment[];
 
-  @UpdateDateColumn({ type: 'timestamptz' })
-  updated_at: Date;
-
-  @OneToMany(() => Saving, (saving) => saving.branch)
+  @OneToMany(() => Saving, (saving) => saving.student)
   savings: Saving[];
-  @OneToMany(() => ParticipationScore, (ps) => ps.branchId)
-  participationScores: ParticipationScore[];
 
   @OneToMany(() => Task, (task) => task.student)
   tasks: Task[];
 
   @OneToMany(() => Attendance, (attendance) => attendance.student)
   attendances: Attendance[];
+
+  // ✅ Removed broken ParticipationScore relation (uses jsonb, no FK to student)
+
+  // =========================
+  // TIMESTAMPS
+  // =========================
+  @CreateDateColumn({ type: 'timestamptz', name: 'created_at' })
+  createdAt: Date;
+
+  @UpdateDateColumn({ type: 'timestamptz', name: 'updated_at' })
+  updatedAt: Date;
 }

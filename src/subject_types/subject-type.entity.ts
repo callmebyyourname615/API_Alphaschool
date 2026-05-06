@@ -6,7 +6,7 @@ import {
   UpdateDateColumn,
   OneToMany,
 } from 'typeorm';
-import { Subject } from '../subjects/subject.entity';
+import { Lesson } from '../lesson/lesson.entity';
 
 @Entity('subject_types')   // ← Better table name (plural)
 export class SubjectType {
@@ -29,6 +29,6 @@ export class SubjectType {
   updated_at: Date;
 
   // Inverse relation
-  @OneToMany(() => Subject, (subject) => subject.subjectType)
-  subjects: Subject[];
+   @OneToMany(() => Lesson, (lesson) => lesson.subjectType)
+  lessons: Lesson[];
 }

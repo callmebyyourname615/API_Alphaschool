@@ -13,24 +13,35 @@ async function bootstrap() {
 
   const config = app.get(ConfigService);
   const logger = app.get(LoggerService);
+  const nodeEnv = config.get<string>('NODE_ENV') ?? 'development';
+  const isProduction = nodeEnv === 'production';
 
   // Replace Nest default logger with custom Winston logger
   app.useLogger(logger);
 
-  // Enable CORS — restrict to known origins
-  const allowedOrigins = (config.get<string>('CORS_ORIGINS') || 'http://localhost:3000,http://localhost:3001').split(',').map(o => o.trim());
- app.enableCors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  allowedHeaders: 'Content-Type,Authorization,Cache-Control,cache-control',
-  credentials: true,
-});
+  // In development we allow any origin to avoid local IP/domain CORS friction.
+  const allowedOrigins = (
+    config.get<string>('CORS_ORIGINS') ??
+    'http://localhost:3000,http://localhost:3001,http://localhost:5000'
+  )
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  app.enableCors({
+    origin: isProduction
+      ? (origin, callback) => {
+          if (!origin || allowedOrigins.includes(origin)) {
+            callback(null, true);
+          } else {
+            callback(new Error('Not allowed by CORS'));
+          }
+        }
+      : true,
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    allowedHeaders: 'Content-Type,Authorization,Cache-Control,cache-control',
+    credentials: true,
+  });
 
   // Set global API prefix from .env (e.g., /api or UUID)
   const prefix = config.get<string>('API_PREFIX') ?? '/api';

@@ -41,6 +41,10 @@ export class UpdateAdminDto {
   phone?: string;
 
   @IsOptional()
+  @IsString()
+  tell?: string;
+
+  @IsOptional()
   @IsDateString()
   dob?: string;
 
@@ -63,6 +67,14 @@ export class UpdateAdminDto {
   @IsOptional()
   @IsString()
   province?: string;
+
+  @IsOptional()
+  @IsString()
+  home_picture_url?: string;
+
+  @IsOptional()
+  @IsString()
+  home_address?: string;
 
   @IsOptional()
   @IsString()

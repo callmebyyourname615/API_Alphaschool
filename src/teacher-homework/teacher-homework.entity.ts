@@ -15,6 +15,7 @@ import { TeachLearning } from '../teach_learning/teach-learning.entity';
 import { Branch } from '../branches/branch.entity';
 import { Teaching } from '../teachings/teaching.entity';
 import { Task } from '../task/task.entity';
+import { Class } from '../classes/class.entity';
 
 @Entity('teacher_homework')
 export class TeacherHomework {
@@ -46,6 +47,19 @@ export class TeacherHomework {
   })
   @JoinColumn({ name: 'branch_id' })
   branch: Branch;
+
+  // =========================
+  // FK: Class ✅ new
+  // =========================
+  @Column('uuid', { name: 'class_id', nullable: true })
+  classId: string | null;
+
+  @ManyToOne(() => Class, (cls) => cls.teacherHomeworks, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'class_id' })
+  class: Class | null;
 
   // =========================
   // OPTIONAL: TeachLearning
@@ -88,14 +102,11 @@ export class TeacherHomework {
   // =========================
   // RELATIONS
   // =========================
-
-  // Items (questions / parts)
   @OneToMany(() => TeacherHomeworkItem, (item) => item.teacherHomework, {
     cascade: true,
   })
   items: TeacherHomeworkItem[];
 
-  // Tasks (student submissions / assignments)
   @OneToMany(() => Task, (task) => task.homework)
   tasks: Task[];
 

@@ -50,11 +50,17 @@ export class Parent {
   @Column({ length: 100, nullable: true })
   religion: string;
 
+  @Column({ type: 'varchar', length: 512, nullable: true })
+  family_book_url: string | null;
+
   // ────────────────────────────────────────────────
   // Contact & Address
   // ────────────────────────────────────────────────
   @Column({ length: 20, nullable: true })
   phone: string;
+
+  @Column({ length: 20, nullable: true })
+  mobile_phone: string;
 
   @Column({ length: 255, nullable: true })
   village: string;
@@ -66,7 +72,19 @@ export class Parent {
   province: string;
 
   @Column({ type: 'text', nullable: true })
-  address: string;
+  home_address: string; // can store as JSON string if complex
+
+  @Column({ length: 512, nullable: true })
+  home_picture_url: string; // optional field for home picture
+
+  @Column({ length: 255, nullable: true })
+  work_province: string;
+
+  @Column({ length: 255, nullable: true })
+  work_district: string;
+
+  @Column({ length: 255, nullable: true })
+  work_village: string;
 
   // ────────────────────────────────────────────────
   // Occupation / Work
@@ -75,7 +93,7 @@ export class Parent {
   occupation: string;
 
   @Column({ length: 255, nullable: true })
-  workplace: string; // renamed for clarity
+  company_name: string; // renamed for clarity
 
   // ────────────────────────────────────────────────
   // Documents / Media
@@ -117,10 +135,4 @@ export class Parent {
 
   @UpdateDateColumn({ type: 'timestamptz' })
   updatedAt: Date;
-
-  // Optional: if you want to track who created/updated (audit)
-  // @Column({ nullable: true })
-  // createdBy?: string;
-  // @Column({ nullable: true })
-  // updatedBy?: string;
 }

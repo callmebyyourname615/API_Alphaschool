@@ -1,46 +1,38 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Evaluation } from './evaluation.entity';
-import { Student } from '../students/student.entity';
-import { Admin } from '../admins/admin.entity';
+import { CreateEvaluationDto } from './dto/create-evaluation.dto';
 import { SubjectEvaluation } from '../subject_evaluations/subject-evaluation.entity';
-
-export interface CreateEvaluationDto {
-  studentId: string;
-  adminId: string;
-  subjectEvaluationId: string;
-  score: number;
-}
 
 @Injectable()
 export class EvaluationService {
   constructor(
     @InjectRepository(Evaluation)
     private readonly evaluationRepo: Repository<Evaluation>,
-
     @InjectRepository(SubjectEvaluation)
     private readonly subjectEvaluationRepo: Repository<SubjectEvaluation>,
   ) {}
 
   async create(dto: CreateEvaluationDto): Promise<Evaluation> {
-    const subjectEval = await this.subjectEvaluationRepo.findOne({
-      where: { id: dto.subjectEvaluationId },
-      relations: ['subject'], // class info might come from subjectEval if you have relation
-    });
+    let subjectEvaluation: SubjectEvaluation | null = null;
 
-    if (!subjectEval) {
-      throw new BadRequestException('subjectEvaluationId not found');
-    }
+    if (dto.subjectEvaluationId) {
+      subjectEvaluation = await this.subjectEvaluationRepo.findOne({
+        where: { id: dto.subjectEvaluationId },
+      });
 
-    if (dto.score === null || dto.score === undefined) {
-      throw new BadRequestException('score is required');
+      if (!subjectEvaluation) {
+        throw new NotFoundException(
+          `Subject evaluation ${dto.subjectEvaluationId} not found`,
+        );
+      }
     }
 
     const evaluation = this.evaluationRepo.create({
-      student: { id: dto.studentId } as Student,
-      admin: { id: dto.adminId } as Admin,
-      subject: subjectEval.subject,
+      admin: { id: dto.adminId } as Evaluation['admin'],
+      student: { id: dto.studentId } as Evaluation['student'],
+      subjectEvaluation: subjectEvaluation ?? undefined,
       score: dto.score,
       created_at: new Date(),
       updated_at: new Date(),
@@ -51,38 +43,47 @@ export class EvaluationService {
 
   async findAll(): Promise<Evaluation[]> {
     return this.evaluationRepo.find({
-      relations: ['student', 'admin', 'subject'],
-      order: { created_at: 'DESC' },
+      order: { created_at: 'DESC', id: 'DESC' },
     });
   }
 
   async findByStudent(studentId: string): Promise<Evaluation[]> {
     return this.evaluationRepo.find({
-      where: { student: { id: studentId } },
-      relations: ['student', 'admin', 'subject'],
-      order: { created_at: 'DESC' },
+      where: {
+        student: {
+          id: studentId,
+        },
+      },
+      order: { created_at: 'DESC', id: 'DESC' },
     });
   }
 
   async updateScore(id: number, score: number): Promise<Evaluation> {
-    const evalEntity = await this.evaluationRepo.findOne({ where: { id } });
-    if (!evalEntity) {
-      throw new NotFoundException(`Evaluation with ID ${id} not found`);
+    const evaluation = await this.evaluationRepo.findOne({
+      where: { id },
+    });
+
+    if (!evaluation) {
+      throw new NotFoundException(`Evaluation ${id} not found`);
     }
 
-    evalEntity.score = score;
-    evalEntity.updated_at = new Date();
+    evaluation.score = score;
+    evaluation.updated_at = new Date();
 
-    return this.evaluationRepo.save(evalEntity);
+    return this.evaluationRepo.save(evaluation);
   }
 
   async remove(id: number): Promise<{ message: string }> {
-    const evalEntity = await this.evaluationRepo.findOne({ where: { id } });
-    if (!evalEntity) {
-      throw new NotFoundException(`Evaluation with ID ${id} not found`);
+    const evaluation = await this.evaluationRepo.findOne({
+      where: { id },
+    });
+
+    if (!evaluation) {
+      throw new NotFoundException(`Evaluation ${id} not found`);
     }
 
-    await this.evaluationRepo.remove(evalEntity);
-    return { message: 'Evaluation deleted successfully' };
+    await this.evaluationRepo.remove(evaluation);
+
+    return { message: `Evaluation ${id} deleted successfully` };
   }
 }

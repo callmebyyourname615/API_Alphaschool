@@ -7,6 +7,7 @@ import { Class } from '../classes/class.entity';
 import { Branch } from '../branches/branch.entity';
 import { AcademicYear } from '../academic_years/academic-year.entity';
 import { Saving } from './savings.entity';
+import { PayReceive } from '../pay_receivce/pay-receive.entity';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { Saving } from './savings.entity';
       Class,
       Branch,
       AcademicYear,
+      PayReceive,
     ]),
   ],
   controllers: [SavingsController],

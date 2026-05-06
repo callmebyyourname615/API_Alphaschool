@@ -1,37 +1,31 @@
-import { IsString, IsUUID, IsOptional, IsInt } from 'class-validator';
+import { IsUUID, IsOptional, IsBoolean, IsArray } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class CreateSubjectDto {
+  @ApiPropertyOptional()
   @IsUUID()
-  subject_type_id: string;
+  @IsOptional()
+  class_id?: string;
 
+  @ApiPropertyOptional()
   @IsUUID()
-  class_id: string;
-
-    @IsUUID()
   @IsOptional()
-  curriculum_id?: string; // ✅ add this
+  subject_type_id?: string;
 
+  @ApiPropertyOptional()
+  @IsUUID()
   @IsOptional()
-  @IsString()
-  description?: string;
+  subjectTypeId?: string;
 
+  // ✅ array of pre-created lesson IDs
+  @ApiPropertyOptional({ type: [String] })
+  @IsArray()
+  @IsUUID('all', { each: true })
   @IsOptional()
-  @IsString()
-  file_s?: string | null;
+  lesson_ids?: string[];
 
+  @ApiPropertyOptional()
+  @IsBoolean()
   @IsOptional()
-  @IsString()
-  s_year?: string | null;
-
-  @IsOptional()
-  @IsString()
-  t_year?: string | null;
-
-  @IsOptional()
-  @IsString()
-  file_t?: string | null;
-
-  @IsOptional()
-  @IsString()
-  file_e?: string | null;
+  is_active?: boolean;
 }

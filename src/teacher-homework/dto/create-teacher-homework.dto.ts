@@ -13,12 +13,16 @@ import { CreateTeacherHomeworkItemDto } from './create-teacher-homework-item.dto
 import { TeacherHomeworkStatus } from '../teacher-homework-status.enum';
 
 export class CreateTeacherHomeworkDto {
-
   @IsUUID()
   teachingId: string;
-  
+
+  @IsOptional()
   @IsUUID()
   teachLearningId?: string;
+
+  @IsOptional() // ✅ new
+  @IsUUID()
+  classId?: string | null;
 
   @IsString()
   @MaxLength(255)

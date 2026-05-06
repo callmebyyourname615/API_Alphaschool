@@ -1,235 +1,173 @@
 import {
   Injectable,
   NotFoundException,
-  BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Student } from './student.entity';
 import { Parent } from '../parents/parent.entity';
-import { Province } from '../location/province.entity';
-import { District } from '../location/district.entity';
-import { SearchStudentByClassDto } from './dto/search-students.dto';
-import { Branch } from '../branches/branch.entity';
-import { AcademicYear } from '../academic_years/academic-year.entity';
-import { Class } from '../classes/class.entity';
+import { Enrollment } from '../enrollments/enrollment.entity';
+import { CreateStudentDto } from './dto/create-student.dto';
+import { CreateEnrollmentDto } from '../enrollments/dto/create-enrollment.dto';
 
 @Injectable()
-export class StudentService {
+export class StudentsService {
   constructor(
     @InjectRepository(Student)
-    private studentRepo: Repository<Student>,
+    private readonly studentRepo: Repository<Student>,
 
     @InjectRepository(Parent)
-    private parentRepo: Repository<Parent>,
+    private readonly parentRepo: Repository<Parent>,
 
-    @InjectRepository(Branch)
-    private branchRepo: Repository<Branch>,
-
-    @InjectRepository(Class)
-    private classRepo: Repository<Class>,
-
-    @InjectRepository(AcademicYear)
-    private academicYearRepo: Repository<AcademicYear>,
-
-    @InjectRepository(Province)
-    private provinceRepo: Repository<Province>,
-
-    @InjectRepository(District)
-    private districtRepo: Repository<District>,
+    @InjectRepository(Enrollment)
+    private readonly enrollmentRepo: Repository<Enrollment>,
   ) {}
 
-  // ================= CREATE =================
-  async createStudent(data: any) {
-    const student = new Student();
+  // ─── Step 1: Create Student ───────────────────────────────────────────
+  async createStudent(dto: CreateStudentDto): Promise<Student> {
+    const student = this.studentRepo.create({
+      branch:     dto.branchId   ? { id: dto.branchId }   : null,
+      province:   dto.provinceId ? { id: dto.provinceId } : null,
+      district:   dto.districtId ? { id: dto.districtId } : null,
 
-    // Simple columns
-    student.student_id = data.student_id;
-    student.village_id = data.village_id;
-    student.first_name = data.first_name;
-    student.last_name = data.last_name;
-    student.dob = data.dob;
-    student.gender = data.gender;
-    student.nationality = data.nationality;
-    student.ethnicity = data.ethnicity;
-    student.religion = data.religion;
-    student.live_with = data.live_with;
-    student.address = data.address;
-    student.emergency_contacts = data.emergency_contacts || [];
-    student.saving_wallet = data.saving_wallet || 0;
-    student.profile_image_path = data.profile_image_path;
+      student_id:         dto.student_id,
+      village_id:         dto.village_id,
+      profile_image_path: dto.profile_image_path,
+      first_name:         dto.first_name,
+      last_name:          dto.last_name,
+      dob:                new Date(dto.dob),
+      gender:             dto.gender,
+      nationality:        dto.nationality,
+      ethnicity:          dto.ethnicity,
+      religion:           dto.religion,
+      live_with:          dto.live_with,
+      address:            dto.address,
+      emergency_contacts: dto.emergency_contacts,
 
-    // Relations with null check
-    const branch = await this.branchRepo.findOne({
-      where: { id: data.branchId },
-    });
-    if (!branch) throw new NotFoundException('Branch not found');
-    student.branch = branch;
-
-    const classEntity = await this.classRepo.findOne({
-      where: { id: data.classId },
+      saving_wallet: 0,
+      is_active:     true,
+      is_deleted:    false,
     });
 
-    if (!classEntity) throw new Error('Class not found');
+    const saved = await this.studentRepo.save(student);
 
-    student.class = classEntity;
-
-    const academicYear = await this.academicYearRepo.findOne({
-      where: { id: data.academicYearId },
-    });
-    if (!academicYear) throw new NotFoundException('AcademicYear not found');
-    student.academicYear = academicYear;
-
-    const province = await this.provinceRepo.findOne({
-      where: { id: data.provinceId },
-    });
-    if (!province) throw new NotFoundException('Province not found');
-    student.province = province;
-
-    const district = await this.districtRepo.findOne({
-      where: { id: data.districtId },
-    });
-    if (!district) throw new NotFoundException('District not found');
-    student.district = district;
-
-    // Parents
-    if (data.parents?.length) {
-      student.parents = await this.parentRepo.find({
-        where: { id: In(data.parents) },
-      });
+    // ─── Step 2: Link Parents if provided ────────────────────────────
+    if (dto.parentIds && dto.parentIds.length > 0) {
+      await this.linkParents(saved.id, dto.parentIds);
     }
 
-    return this.studentRepo.save(student);
+    return this.findById(saved.id);
   }
 
-  // ================= GET ALL =================
-  getAllStudents() {
-    return this.studentRepo.find({
-      where: { is_deleted: false },
-      relations: ['branch', 'academicYear', 'province', 'district', 'parents'],
-      order: { created_at: 'DESC' },
-    });
-  }
-
-  // ================= GET BY ID =================
-  getStudentById(id: string) {
-    return this.studentRepo.findOne({
-      where: { id },
-      relations: ['branch', 'academicYear', 'province', 'district', 'parents'],
-    });
-  }
-
-  // ================= UPDATE =================
-  async updateStudent(id: string, data: any) {
+  // ─── Step 2: Link Parents ─────────────────────────────────────────────
+  async linkParents(studentId: string, parentIds: string[]): Promise<Student> {
     const student = await this.studentRepo.findOne({
-      where: { id },
+      where: { id: studentId },
       relations: ['parents'],
     });
 
     if (!student) throw new NotFoundException('Student not found');
 
-    // Update simple fields
-    Object.assign(student, data);
+    const parents = await this.parentRepo.findByIds(parentIds);
 
-    // Update relations safely
-    if (data.branchId) {
-      const branch = await this.branchRepo.findOne({
-        where: { id: data.branchId },
-      });
-      if (!branch) throw new NotFoundException('Branch not found');
-      student.branch = branch;
+    if (parents.length !== parentIds.length) {
+      throw new NotFoundException('One or more parents not found');
     }
 
-    if (data.academicYearId) {
-      const academicYear = await this.academicYearRepo.findOne({
-        where: { id: data.academicYearId },
-      });
-      if (!academicYear) throw new NotFoundException('AcademicYear not found');
-      student.academicYear = academicYear;
-    }
-
-    if (data.provinceId) {
-      const province = await this.provinceRepo.findOne({
-        where: { id: data.provinceId },
-      });
-      if (!province) throw new NotFoundException('Province not found');
-      student.province = province;
-    }
-
-    if (data.districtId) {
-      const district = await this.districtRepo.findOne({
-        where: { id: data.districtId },
-      });
-      if (!district) throw new NotFoundException('District not found');
-      student.district = district;
-    }
-
-    if (data.parents?.length) {
-      student.parents = await this.parentRepo.find({
-        where: { id: In(data.parents) },
-      });
-    }
-
-    return this.studentRepo.save(student);
+    student.parents = parents;
+    return await this.studentRepo.save(student);
   }
 
-  // ================= DELETE (Soft Delete) =================
-  async deleteStudent(id: string) {
-    const student = await this.studentRepo.findOne({ where: { id } });
+  // ─── Step 3: Enroll Student ───────────────────────────────────────────
+  async enrollStudent(dto: CreateEnrollmentDto): Promise<Enrollment> {
+    const student = await this.studentRepo.findOne({
+      where: { id: dto.studentId },
+    });
+
     if (!student) throw new NotFoundException('Student not found');
-    student.is_deleted = true;
-    student.is_active = false;
-    return this.studentRepo.save(student);
-  }
 
-  async getStudentsByClass(dto: SearchStudentByClassDto) {
-    try {
-      const query = this.studentRepo
-        .createQueryBuilder('student')
-        .innerJoinAndSelect('student.classId', 'class') // ✅ FIXED
-        .leftJoinAndSelect('student.branch', 'branch')
-        .leftJoinAndSelect('student.academicYear', 'academicYear')
-        .where('student.is_deleted = false');
+    const existing = await this.enrollmentRepo.findOne({
+      where: {
+        studentId:      dto.studentId,
+        academicYearId: dto.academicYearId,
+      },
+    });
 
-      // 🔹 filter by class
-      if (dto.classIds?.length) {
-        query.andWhere('class.id IN (:...classIds)', {
-          classIds: dto.classIds,
-        });
-      }
-
-      // 🔹 filter by branch
-      if (dto.branchId) {
-        query.andWhere('branch.id = :branchId', {
-          branchId: dto.branchId,
-        });
-      }
-
-      // 🔹 filter by academic year
-      if (dto.academicYearId) {
-        query.andWhere('academicYear.id = :academicYearId', {
-          academicYearId: dto.academicYearId,
-        });
-      }
-
-      // 🔹 filter active
-      if (dto.isActive !== undefined) {
-        query.andWhere('student.is_active = :isActive', {
-          isActive: dto.isActive,
-        });
-      }
-
-      query.orderBy('student.first_name', 'ASC');
-
-      const students = await query.getMany();
-
-      return {
-        data: students,
-        total: students.length,
-      };
-    } catch (err) {
-      console.error('getStudentsByClass ERROR:', err);
-      throw err;
+    if (existing) {
+      throw new ConflictException(
+        'Student is already enrolled in this academic year',
+      );
     }
+
+    const enrollment = this.enrollmentRepo.create({
+      student:      { id: dto.studentId },
+      academicYear: { id: dto.academicYearId },
+      class:        { id: dto.classId },
+      branch:       { id: dto.branchId },
+      is_active:    dto.is_active ?? true,
+    });
+
+    return await this.enrollmentRepo.save(enrollment);
   }
+
+  // ─── Helpers ──────────────────────────────────────────────────────────
+  async findById(id: string): Promise<Student> {
+    const student = await this.studentRepo.findOne({
+      where: { id },
+      relations: ['branch', 'province', 'district', 'parents', 'enrollments'],
+    });
+
+    if (!student) throw new NotFoundException('Student not found');
+    return student;
+  }
+
+  async findAll(): Promise<Student[]> {
+    return this.studentRepo.find({
+      where: { is_deleted: false },
+      relations: ['branch', 'province', 'district', 'parents', 'enrollments'],
+    });
+  }
+
+  // ─── Update Student ───────────────────────────────────────────────────
+async updateStudent(id: string, dto: Partial<CreateStudentDto>): Promise<Student> {
+  const student = await this.findById(id);
+
+  Object.assign(student, {
+    branch:   dto.branchId   ? { id: dto.branchId }   : student.branch,
+    province: dto.provinceId ? { id: dto.provinceId } : student.province,
+    district: dto.districtId ? { id: dto.districtId } : student.district,
+
+    student_id:         dto.student_id         ?? student.student_id,
+    village_id:         dto.village_id         ?? student.village_id,
+    profile_image_path: dto.profile_image_path ?? student.profile_image_path,
+    first_name:         dto.first_name         ?? student.first_name,
+    last_name:          dto.last_name          ?? student.last_name,
+    dob:                dto.dob ? new Date(dto.dob) : student.dob,
+    gender:             dto.gender             ?? student.gender,
+    nationality:        dto.nationality        ?? student.nationality,
+    ethnicity:          dto.ethnicity          ?? student.ethnicity,
+    religion:           dto.religion           ?? student.religion,
+    live_with:          dto.live_with          ?? student.live_with,
+    address:            dto.address            ?? student.address,
+    emergency_contacts: dto.emergency_contacts ?? student.emergency_contacts,
+  });
+
+  const updated = await this.studentRepo.save(student);
+
+  if (dto.parentIds && dto.parentIds.length > 0) {
+    await this.linkParents(id, dto.parentIds);
+  }
+
+  return this.findById(updated.id);
+}
+
+// ─── Delete Student (soft delete) ────────────────────────────────────
+async deleteStudent(id: string): Promise<{ message: string }> {
+  const student = await this.findById(id);
+  student.is_deleted = true;
+  student.is_active  = false;
+  await this.studentRepo.save(student);
+  return { message: `Student ${id} deleted successfully` };
+}
 }

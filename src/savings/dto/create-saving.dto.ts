@@ -12,6 +12,9 @@ export class CreateSavingDto {
   @IsEnum(SavingOwnerType)
   owner_type: SavingOwnerType;
 
+  @IsUUID()
+  created_by: string; // Admin (teacher/employee) who creates the saving
+
   @IsOptional()
   @IsUUID()
   student_id?: string;

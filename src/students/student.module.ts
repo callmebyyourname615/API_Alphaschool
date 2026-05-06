@@ -1,7 +1,5 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { StudentService } from './student.service';
-import { StudentController } from './student.controller';
 import { Student } from './student.entity';
 import { Parent } from '../parents/parent.entity';
 import { Province } from '../location/province.entity';
@@ -9,6 +7,9 @@ import { District } from '../location/district.entity';
 import { AcademicYear } from '../academic_years/academic-year.entity';
 import { Branch } from '../branches/branch.entity';
 import { Class } from '../classes/class.entity';
+import { StudentsService } from './student.service';
+import { StudentsController } from './student.controller';
+import { Enrollment } from '../enrollments/enrollment.entity';
 
 @Module({
   imports: [
@@ -20,9 +21,10 @@ import { Class } from '../classes/class.entity';
       AcademicYear,
       Province,
       District,
+      Enrollment,
     ]),
   ],
-  providers: [StudentService],
-  controllers: [StudentController],
+  providers: [StudentsService],
+  controllers: [StudentsController],
 })
 export class StudentModule {}
