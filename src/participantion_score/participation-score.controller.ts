@@ -1,5 +1,3 @@
-// participation-score.controller.ts
-
 import {
   Controller,
   Get,
@@ -8,15 +6,10 @@ import {
   Delete,
   Body,
   Param,
-  Query,
-  BadRequestException,
-  InternalServerErrorException,
 } from '@nestjs/common';
 import { ParticipationScoreService } from './participation-score.service';
 import { CreateParticipationScoreDto } from './dto/create-participation-score.dto';
 import { UpdateParticipationScoreDto } from './dto/update-participation-score.dto';
-import { Between } from 'typeorm';
-import { query } from 'winston';
 
 export interface ScoreResult {
   studentId: string;
@@ -26,63 +19,57 @@ export interface ScoreResult {
   score: number;
 }
 
-
 @Controller('participation-scores')
 export class ParticipationScoreController {
   constructor(private readonly service: ParticipationScoreService) {}
 
-  
-  /* ================= GET ALL ================= */
   @Get()
-  async findAll() {
+  findAll() {
     return this.service.findAll();
   }
 
-  /* ================= GET BY ID ================= */
   @Get(':id')
-  async findOne(@Param('id') id: string) {
+  findOne(@Param('id') id: string) {
     return this.service.findOne(id);
   }
 
-  /* ================= CREATE ================= */
   @Post()
-  async create(@Body() dto: CreateParticipationScoreDto) {
+  create(@Body() dto: CreateParticipationScoreDto) {
     return this.service.create(dto);
   }
 
-  /* ================= UPDATE ================= */
   @Put(':id')
-  async update(
-    @Param('id') id: string,
-    @Body() dto: UpdateParticipationScoreDto,
-  ) {
+  update(@Param('id') id: string, @Body() dto: UpdateParticipationScoreDto) {
     return this.service.update(id, dto);
   }
 
-  /* ================= DELETE ================= */
   @Delete(':id')
-  async remove(@Param('id') id: string) {
+  remove(@Param('id') id: string) {
     return this.service.remove(id);
   }
 
-  /* ================= BULK CREATE ================= */
-  /* ================= BULK UPSERT ================= */
   @Post('bulk-upsert')
-  async bulkUpsert(@Body() dto: CreateParticipationScoreDto) {
+  bulkUpsert(@Body() dto: CreateParticipationScoreDto) {
     return this.service.bulkUpsert(dto);
   }
 
-  // Controller
   @Post('filter')
-async filterData(@Body() body: { branchId: string; academicYearId: string; classId: string; date: string }): Promise<ScoreResult[]> {
-  const result = await this.service.getScoresByFilter({
-    branchId: body.branchId,
-    academicYearId: body.academicYearId,
-    classId: body.classId,
-    date: new Date(body.date),
-  });
-
-  return result;
-}
-
+  filterData(
+    @Body()
+    body: {
+      branchId: string;
+      academicYearId: string;
+      levelId: string;            // ← added
+      classId: string;
+      date: string;
+    },
+  ): Promise<ScoreResult[]> {
+    return this.service.getScoresByFilter({
+      branchId: body.branchId,
+      academicYearId: body.academicYearId,
+      levelId: body.levelId,      // ← added
+      classId: body.classId,
+      date: new Date(body.date),
+    });
+  }
 }

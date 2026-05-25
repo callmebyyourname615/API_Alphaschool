@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  forwardRef,
+  Inject,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -20,9 +22,11 @@ import {
 } from './savings.entity';
 import {
   PayReceive,
+  PayReceiveFlowType,
   PayReceiveStatus,
 } from '../pay_receivce/pay-receive.entity';
 import { CreateBulkSavingByClassDto } from './dto/create-bulk-saving-by-class.dto';
+import { SavingSession } from './saving-session.entity';
 
 @Injectable()
 export class SavingsService {
@@ -38,6 +42,8 @@ export class SavingsService {
 
     @InjectRepository(PayReceive)
     private readonly payReceiveRepository: Repository<PayReceive>,
+    @InjectRepository(SavingSession)
+    private readonly savingSessionRepository: Repository<SavingSession>,
   ) {}
 
   // ─── PRIVATE HELPERS ──────────────────────────────────────────────────────
@@ -54,6 +60,21 @@ export class SavingsService {
     return balance;
   }
 
+  // ✅ Guard: withdraw_reason_id is required for WITHDRAW transactions
+  private guardWithdrawReason(
+    transactionType: SavingTransactionType,
+    withdrawReasonId?: string,
+  ): void {
+    if (
+      transactionType === SavingTransactionType.WITHDRAW &&
+      !withdrawReasonId
+    ) {
+      throw new BadRequestException(
+        'withdraw_reason_id is required for WITHDRAW transactions',
+      );
+    }
+  }
+
   private async getStudentWithRelations(
     studentId: string,
   ): Promise<Student | null> {
@@ -64,7 +85,7 @@ export class SavingsService {
       .getOne();
   }
 
-  private async recalculateStudentBalances(studentId: string): Promise<void> {
+  async recalculateStudentBalances(studentId: string): Promise<void> {
     const student = await this.studentRepository.findOne({
       where: { id: studentId },
     });
@@ -104,10 +125,17 @@ export class SavingsService {
   }
 
   private async createPayReceive(saving: Saving): Promise<void> {
+    const flowType =
+      saving.transaction_type === SavingTransactionType.WITHDRAW
+        ? PayReceiveFlowType.WITHDRAWAL
+        : PayReceiveFlowType.DEPOSIT;
+
     const payReceive = this.payReceiveRepository.create({
       saving_id: saving.id,
       amount: saving.amount,
+      flow_type: flowType,
       status: PayReceiveStatus.PENDING,
+      initiated_by: saving.created_by,
       is_deleted: false,
     });
     await this.payReceiveRepository.save(payReceive);
@@ -130,7 +158,11 @@ export class SavingsService {
       transaction_type,
       amount,
       note,
+      withdraw_reason_id, // ✅
     } = createSavingDto;
+
+    // ✅ validate withdraw reason early for both owner types
+    this.guardWithdrawReason(transaction_type, withdraw_reason_id);
 
     if (owner_type === SavingOwnerType.STUDENT) {
       if (!student_id) throw new BadRequestException('student_id is required');
@@ -161,6 +193,7 @@ export class SavingsService {
         amount: Number(amount),
         closing_balance: nextBalance,
         note,
+        withdraw_reason_id: withdraw_reason_id ?? null, // ✅
         is_active: true,
         is_deleted: false,
       };
@@ -216,6 +249,7 @@ export class SavingsService {
         amount: Number(amount),
         closing_balance: nextBalance,
         note,
+        withdraw_reason_id: withdraw_reason_id ?? null, // ✅
         is_active: true,
         is_deleted: false,
       };
@@ -231,7 +265,7 @@ export class SavingsService {
     throw new BadRequestException('Invalid owner_type');
   }
 
-  // ─── CREATE CLASS SAVING (dedicated) ─────────────────────────────────────
+  // ─── CREATE CLASS SAVING ──────────────────────────────────────────────────
 
   async createClassSaving(dto: CreateClassSavingDto): Promise<Saving> {
     const {
@@ -242,7 +276,10 @@ export class SavingsService {
       transaction_type,
       amount,
       note,
+      withdraw_reason_id, // ✅
     } = dto;
+
+    this.guardWithdrawReason(transaction_type, withdraw_reason_id); // ✅
 
     const classInfo = await this.classRepository.findOne({
       where: { id: class_id },
@@ -276,6 +313,7 @@ export class SavingsService {
       amount: Number(amount),
       closing_balance: nextBalance,
       note,
+      withdraw_reason_id: withdraw_reason_id ?? null, // ✅
       is_active: true,
       is_deleted: false,
     };
@@ -287,36 +325,58 @@ export class SavingsService {
     return await this.findOne(created.id);
   }
 
-  // ─── CREATE STUDENTS SAVING SESSION (dedicated) ───────────────────────────
+  // ─── CREATE STUDENTS SAVING SESSION ───────────────────────────────────────
 
   async createStudentsSavingSession(
     dto: CreateStudentsSavingSessionDto,
-  ): Promise<{
-    total_students: number;
-    success_count: number;
-    failed_count: number;
-    success: Saving[];
-    failed: { student_id: string; amount: number; reason: string }[];
-  }> {
-    const { created_by, transaction_type, shared_note, students } = dto;
+  ): Promise<SavingSession> {
+    const {
+      created_by,
+      class_id,
+      branch_id,
+      academic_year_id,
+      transaction_type,
+      shared_note,
+      students,
+      withdraw_reason_id,
+    } = dto;
 
-    if (!students || students.length === 0) {
+    if (!students || students.length === 0)
       throw new BadRequestException('students must not be empty');
-    }
 
-    const success: Saving[] = [];
-    const failed: { student_id: string; amount: number; reason: string }[] = [];
+    this.guardWithdrawReason(transaction_type, withdraw_reason_id);
+
+    // ── 1. Create session header first ────────────────────────────────────
+    const session = await this.savingSessionRepository.save(
+      this.savingSessionRepository.create({
+        created_by,
+        class_id: class_id ?? null,
+        branch_id: branch_id ?? null,
+        academic_year_id: academic_year_id ?? null,
+        transaction_type,
+        note: shared_note ?? null,
+        withdraw_reason_id: withdraw_reason_id ?? null,
+        total_students: students.length,
+        total_amount: 0,
+        success_count: 0,
+        failed_count: 0,
+      }),
+    );
+
+    // ── 2. Process each student ───────────────────────────────────────────
+    let totalAmount = 0;
+    let successCount = 0;
+    let failedCount = 0;
 
     for (const entry of students) {
       try {
-        const student = await this.getStudentWithRelations(entry.student_id);
+        const effectiveReasonId =
+          entry.withdraw_reason_id ?? withdraw_reason_id;
+        this.guardWithdrawReason(transaction_type, effectiveReasonId);
 
+        const student = await this.getStudentWithRelations(entry.student_id);
         if (!student) {
-          failed.push({
-            student_id: entry.student_id,
-            amount: entry.amount,
-            reason: 'Student not found',
-          });
+          failedCount++;
           continue;
         }
 
@@ -329,17 +389,14 @@ export class SavingsService {
         );
 
         if (nextBalance < 0) {
-          failed.push({
-            student_id: entry.student_id,
-            amount: entry.amount,
-            reason: 'Insufficient balance',
-          });
+          failedCount++;
           continue;
         }
 
         const savingData: DeepPartial<Saving> = {
           owner_type: SavingOwnerType.STUDENT,
           created_by,
+          session_id: session.id, // ✅ link to session
           student_id: student.id,
           class_id: studentData.classId?.id ?? null,
           branch_id: studentData.branch?.id ?? null,
@@ -348,7 +405,7 @@ export class SavingsService {
           opening_balance: currentBalance,
           amount: Number(entry.amount),
           closing_balance: nextBalance,
-          note: entry.note ?? shared_note ?? undefined,
+          withdraw_reason_id: effectiveReasonId ?? null,
           is_active: true,
           is_deleted: false,
         };
@@ -359,27 +416,41 @@ export class SavingsService {
         await this.recalculateStudentBalances(student.id);
         await this.createPayReceive(created);
 
-        const full = await this.findOne(created.id);
-        success.push(full);
-      } catch (err: any) {
-        failed.push({
-          student_id: entry.student_id,
-          amount: entry.amount,
-          reason: err?.message ?? 'Unknown error',
-        });
+        totalAmount += Number(entry.amount);
+        successCount++;
+      } catch {
+        failedCount++;
       }
     }
 
-    return {
-      total_students: students.length,
-      success_count: success.length,
-      failed_count: failed.length,
-      success,
-      failed,
-    };
+    // ── 3. Update session summary counts ─────────────────────────────────
+    session.total_amount = totalAmount;
+    session.success_count = successCount;
+    session.failed_count = failedCount;
+    await this.savingSessionRepository.save(session);
+
+    // ── 4. Return full session with nested savings ────────────────────────
+    const result = await this.savingSessionRepository.findOne({
+      where: { id: session.id },
+      relations: {
+        createdBy: true,
+        class: true,
+        branch: true,
+        academic_year: true,
+        withdrawReason: true,
+        savings: {
+          student: true,
+          withdrawReason: true,
+        },
+      },
+    });
+    if (!result)
+      throw new NotFoundException('Session not found after creation');
+
+    return result;
   }
 
-  // ─── CREATE BULK (by student_ids — same amount) ───────────────────────────
+  // ─── CREATE BULK ──────────────────────────────────────────────────────────
 
   async createBulk(dto: CreateBulkSavingDto): Promise<{
     total: number;
@@ -388,11 +459,19 @@ export class SavingsService {
     success: Saving[];
     failed: { student_id: string; reason: string }[];
   }> {
-    const { created_by, student_ids, transaction_type, amount, note } = dto;
+    const {
+      created_by,
+      student_ids,
+      transaction_type,
+      amount,
+      note,
+      withdraw_reason_id, // ✅
+    } = dto;
 
-    if (!student_ids || student_ids.length === 0) {
+    if (!student_ids || student_ids.length === 0)
       throw new BadRequestException('student_ids must not be empty');
-    }
+
+    this.guardWithdrawReason(transaction_type, withdraw_reason_id); // ✅
 
     const success: Saving[] = [];
     const failed: { student_id: string; reason: string }[] = [];
@@ -431,6 +510,7 @@ export class SavingsService {
           amount: Number(amount),
           closing_balance: nextBalance,
           note,
+          withdraw_reason_id: withdraw_reason_id ?? null, // ✅
           is_active: true,
           is_deleted: false,
         };
@@ -457,7 +537,7 @@ export class SavingsService {
     };
   }
 
-  // ─── CREATE BULK BY CLASS (all students — same amount) ────────────────────
+  // ─── CREATE BULK BY CLASS ─────────────────────────────────────────────────
 
   async createBulkByClass(dto: CreateBulkSavingByClassDto): Promise<{
     total: number;
@@ -487,6 +567,7 @@ export class SavingsService {
       transaction_type: dto.transaction_type,
       amount: dto.amount,
       note: dto.note,
+      withdraw_reason_id: dto.withdraw_reason_id ?? undefined, // ✅
     });
   }
 
@@ -501,6 +582,7 @@ export class SavingsService {
         branch: true,
         academic_year: true,
         createdBy: true,
+        withdrawReason: true, // ✅
       },
       order: { created_at: 'DESC' },
     });
@@ -517,6 +599,7 @@ export class SavingsService {
         branch: true,
         academic_year: true,
         createdBy: true,
+        withdrawReason: true, // ✅
       },
     });
 
@@ -556,11 +639,18 @@ export class SavingsService {
     if (updateSavingDto.amount !== undefined)
       saving.amount = Number(updateSavingDto.amount);
     if (updateSavingDto.note !== undefined) saving.note = updateSavingDto.note;
+    if (updateSavingDto.withdraw_reason_id !== undefined)
+      // ✅
+      saving.withdraw_reason_id = updateSavingDto.withdraw_reason_id ?? null;
 
     const updated = await this.savingRepository.save(saving);
 
     await this.recalculateStudentBalances(oldStudentId);
-    if (saving.owner_type === SavingOwnerType.STUDENT && saving.student_id) {
+    if (
+      saving.owner_type === SavingOwnerType.STUDENT &&
+      saving.student_id &&
+      saving.student_id !== oldStudentId
+    ) {
       await this.recalculateStudentBalances(saving.student_id);
     }
 
@@ -575,14 +665,14 @@ export class SavingsService {
     });
 
     if (!saving) throw new NotFoundException('Saving not found');
-    if (!saving.student_id)
-      throw new BadRequestException('Saving.student_id is missing');
 
     saving.is_deleted = true;
     saving.is_active = false;
 
     await this.savingRepository.save(saving);
-    await this.recalculateStudentBalances(saving.student_id);
+
+    if (saving.student_id)
+      await this.recalculateStudentBalances(saving.student_id);
 
     return { message: 'Saving deleted successfully' };
   }
@@ -648,6 +738,7 @@ export class SavingsService {
         branch: true,
         academic_year: true,
         createdBy: true,
+        withdrawReason: true, // ✅
       },
       order: { created_at: 'DESC' },
     });
@@ -667,7 +758,7 @@ export class SavingsService {
         class_id: classId,
         is_deleted: false,
       },
-      relations: { createdBy: true },
+      relations: { createdBy: true, withdrawReason: true }, // ✅
       order: { created_at: 'ASC', updated_at: 'ASC' },
     });
 
@@ -677,14 +768,11 @@ export class SavingsService {
         : 0;
 
     const classDepositTotal = classSavings
-      .filter((item) => item.transaction_type === SavingTransactionType.DEPOSIT)
-      .reduce((sum, item) => sum + Number(item.amount), 0);
-
+      .filter((i) => i.transaction_type === SavingTransactionType.DEPOSIT)
+      .reduce((s, i) => s + Number(i.amount), 0);
     const classWithdrawTotal = classSavings
-      .filter(
-        (item) => item.transaction_type === SavingTransactionType.WITHDRAW,
-      )
-      .reduce((sum, item) => sum + Number(item.amount), 0);
+      .filter((i) => i.transaction_type === SavingTransactionType.WITHDRAW)
+      .reduce((s, i) => s + Number(i.amount), 0);
 
     const students = await this.studentRepository.find({
       where: { classId: { id: classId }, is_deleted: false } as any,
@@ -692,7 +780,7 @@ export class SavingsService {
       order: { createdAt: 'ASC' },
     });
 
-    const studentIds = students.map((student: any) => student.id);
+    const studentIds = students.map((s: any) => s.id);
     let studentSavings: Saving[] = [];
 
     if (studentIds.length > 0) {
@@ -702,7 +790,7 @@ export class SavingsService {
           student_id: In(studentIds),
           is_deleted: false,
         },
-        relations: { createdBy: true },
+        relations: { createdBy: true, withdrawReason: true }, // ✅
         order: { created_at: 'ASC', updated_at: 'ASC' },
       });
     }
@@ -730,6 +818,7 @@ export class SavingsService {
         amount: this.formatMoney(item.amount),
         closing_balance: this.formatMoney(item.closing_balance),
         note: item.note ?? null,
+        withdraw_reason: item.withdrawReason ?? null, // ✅
         created_by: item.createdBy ?? null,
         created_at: item.created_at,
         updated_at: item.updated_at,
@@ -737,18 +826,12 @@ export class SavingsService {
       total_students: students.length,
       students: students.map((student: any) => {
         const histories = savingMap.get(student.id) ?? [];
-
         const depositTotal = histories
-          .filter(
-            (item) => item.transaction_type === SavingTransactionType.DEPOSIT,
-          )
-          .reduce((sum, item) => sum + Number(item.amount), 0);
-
+          .filter((i) => i.transaction_type === SavingTransactionType.DEPOSIT)
+          .reduce((s, i) => s + Number(i.amount), 0);
         const withdrawTotal = histories
-          .filter(
-            (item) => item.transaction_type === SavingTransactionType.WITHDRAW,
-          )
-          .reduce((sum, item) => sum + Number(item.amount), 0);
+          .filter((i) => i.transaction_type === SavingTransactionType.WITHDRAW)
+          .reduce((s, i) => s + Number(i.amount), 0);
 
         return {
           id: student.id,
@@ -775,6 +858,7 @@ export class SavingsService {
             amount: Number(item.amount),
             closing_balance: Number(item.closing_balance),
             note: item.note ?? null,
+            withdraw_reason: item.withdrawReason ?? null, // ✅
             created_by: item.createdBy ?? null,
             created_at: item.created_at,
             updated_at: item.updated_at,
@@ -782,5 +866,23 @@ export class SavingsService {
         };
       }),
     };
+  }
+
+  // ─── REMOVE CLASS SAVING ──────────────────────────────────────────────────
+
+  async removeClassSaving(id: string): Promise<{ message: string }> {
+    const saving = await this.savingRepository.findOne({
+      where: { id, is_deleted: false },
+    });
+
+    if (!saving) throw new NotFoundException('Saving not found');
+    if (saving.owner_type !== SavingOwnerType.CLASS)
+      throw new BadRequestException('This method is only for CLASS savings');
+
+    saving.is_deleted = true;
+    saving.is_active = false;
+    await this.savingRepository.save(saving);
+
+    return { message: 'Class saving deleted successfully' };
   }
 }

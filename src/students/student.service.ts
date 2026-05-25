@@ -4,12 +4,13 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { Student } from './student.entity';
 import { Parent } from '../parents/parent.entity';
 import { Enrollment } from '../enrollments/enrollment.entity';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { CreateEnrollmentDto } from '../enrollments/dto/create-enrollment.dto';
+import { SearchStudentByClassDto } from './dto/search-students.dto';
 
 @Injectable()
 export class StudentsService {
@@ -162,6 +163,26 @@ async updateStudent(id: string, dto: Partial<CreateStudentDto>): Promise<Student
   return this.findById(updated.id);
 }
 
+// ─── Find Students by Class IDs ──────────────────────────────────────
+async findByClass(dto: SearchStudentByClassDto): Promise<Student[]> {
+  const enrollments = await this.enrollmentRepo.find({
+    where: {
+      classId: In(dto.classIds),
+      ...(dto.isActive !== undefined ? { is_active: dto.isActive } : { is_active: true }),
+    },
+    select: ['studentId'],
+  });
+
+  const studentIds = [...new Set(enrollments.map((e) => e.studentId))];
+  if (studentIds.length === 0) return [];
+
+  return this.studentRepo.find({
+    where: { id: In(studentIds), is_deleted: false },
+    relations: ['branch', 'parents', 'enrollments', 'enrollments.class'],
+    order: { first_name: 'ASC' },
+  });
+}
+
 // ─── Delete Student (soft delete) ────────────────────────────────────
 async deleteStudent(id: string): Promise<{ message: string }> {
   const student = await this.findById(id);
@@ -170,4 +191,5 @@ async deleteStudent(id: string): Promise<{ message: string }> {
   await this.studentRepo.save(student);
   return { message: `Student ${id} deleted successfully` };
 }
+
 }

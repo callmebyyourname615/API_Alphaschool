@@ -2,38 +2,55 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { DataSource, Repository, In } from 'typeorm';
 import { ParticipationList } from './participation_list.entity';
-import { Class } from '../classes/class.entity';
+import { Level } from '../levels/level.entity';
 import { CreateParticipationListDto } from './dto/create-participation-list.dto';
 import { UpdateParticipationListDto } from './dto/update-participation-list.dto';
 
 @Injectable()
-export class ParticipationListService {
+export class ParticipationListService implements OnModuleInit {
   constructor(
     @InjectRepository(ParticipationList)
     private participationRepo: Repository<ParticipationList>,
 
-    @InjectRepository(Class)
-    private classRepo: Repository<Class>,
+    @InjectRepository(Level)
+    private levelRepo: Repository<Level>,
+
+    private dataSource: DataSource,
   ) {}
 
+  async onModuleInit() {
+    await this.dataSource.query(`
+      CREATE TABLE IF NOT EXISTS participation_list_levels (
+        participation_list_id UUID NOT NULL,
+        level_id              UUID NOT NULL,
+        PRIMARY KEY (participation_list_id, level_id),
+        CONSTRAINT fk_pll_list  FOREIGN KEY (participation_list_id)
+          REFERENCES participation_list(id) ON DELETE CASCADE ON UPDATE CASCADE,
+        CONSTRAINT fk_pll_level FOREIGN KEY (level_id)
+          REFERENCES levels(id) ON DELETE CASCADE ON UPDATE CASCADE
+      )
+    `);
+  }
+
   async create(dto: CreateParticipationListDto): Promise<ParticipationList> {
-    const classes = await this.classRepo.find({
-      where: { id: In(dto.classIds) },
+    const levels = await this.levelRepo.find({
+      where: { id: In(dto.levelIds) },
     });
 
-    if (classes.length !== dto.classIds.length) {
-      throw new BadRequestException('One or more class IDs do not exist');
+    if (levels.length !== dto.levelIds.length) {
+      throw new BadRequestException('One or more level IDs do not exist');
     }
 
     const list = this.participationRepo.create({
       name: dto.name,
       score: dto.score,
       description: dto.description,
-      classes,
+      levels,
     });
 
     return this.participationRepo.save(list);
@@ -41,16 +58,16 @@ export class ParticipationListService {
 
   async findAll(): Promise<ParticipationList[]> {
     return this.participationRepo.find({
-      relations: ['classes'],
+      relations: ['levels'],
       order: { created_at: 'DESC' },
     });
   }
 
-  async findByClassId(classId: string): Promise<ParticipationList[]> {
+  async findByLevelId(levelId: string): Promise<ParticipationList[]> {
     return this.participationRepo
       .createQueryBuilder('list')
-      .innerJoinAndSelect('list.classes', 'class')
-      .where('class.id = :classId', { classId })
+      .innerJoinAndSelect('list.levels', 'level')
+      .where('level.id = :levelId', { levelId })
       .orderBy('list.created_at', 'ASC')
       .getMany();
   }
@@ -58,7 +75,7 @@ export class ParticipationListService {
   async findOne(id: string): Promise<ParticipationList> {
     const item = await this.participationRepo.findOne({
       where: { id },
-      relations: ['classes'],
+      relations: ['levels'],
     });
 
     if (!item) {
@@ -68,26 +85,27 @@ export class ParticipationListService {
     return item;
   }
 
-  async update(id: string, dto: UpdateParticipationListDto): Promise<ParticipationList> {
+  async update(
+    id: string,
+    dto: UpdateParticipationListDto,
+  ): Promise<ParticipationList> {
     const list = await this.findOne(id);
 
-    // Update basic fields
     if (dto.name !== undefined) list.name = dto.name;
     if (dto.score !== undefined) list.score = dto.score;
     if (dto.description !== undefined) list.description = dto.description;
 
-    // Update classes if provided
-    if (dto.classIds !== undefined) {
-      if (dto.classIds.length === 0) {
-        list.classes = [];
+    if (dto.levelIds !== undefined) {
+      if (dto.levelIds.length === 0) {
+        list.levels = [];
       } else {
-        const classes = await this.classRepo.find({
-          where: { id: In(dto.classIds) },
+        const levels = await this.levelRepo.find({
+          where: { id: In(dto.levelIds) },
         });
-        if (classes.length !== dto.classIds.length) {
-          throw new BadRequestException('One or more class IDs do not exist');
+        if (levels.length !== dto.levelIds.length) {
+          throw new BadRequestException('One or more level IDs do not exist');
         }
-        list.classes = classes;
+        list.levels = levels;
       }
     }
 

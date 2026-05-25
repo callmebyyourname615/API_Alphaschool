@@ -52,4 +52,16 @@ export class CreateExaminationDto {
   @Min(0)
   @IsOptional()
   passScore?: number;
+
+  @IsUUID()
+  @IsOptional()
+  checkerId?: string;
+
+  @IsUUID()
+  @IsOptional()
+  createdById?: string;
+
+  @IsUUID()
+  @IsOptional()
+  superAdminRoleId?: string;
 }

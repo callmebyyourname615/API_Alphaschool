@@ -1,4 +1,5 @@
 // dto/create-class-saving.dto.ts
+import { IsOptional, IsUUID } from 'class-validator';
 import { SavingTransactionType } from '../savings.entity';
 
 export class CreateClassSavingDto {
@@ -9,4 +10,7 @@ export class CreateClassSavingDto {
   transaction_type: SavingTransactionType;
   amount: number;
   note?: string;
+  @IsOptional()
+  @IsUUID()
+  withdraw_reason_id?: string;
 }

@@ -7,7 +7,7 @@ import {
   ManyToMany,
   JoinTable,
 } from 'typeorm';
-import { Class } from '../classes/class.entity';
+import { Level } from '../levels/level.entity'; // ← adjust path to match your project
 
 @Entity('participation_list')
 export class ParticipationList {
@@ -18,23 +18,24 @@ export class ParticipationList {
   name: string;
 
   @Column({ nullable: true, type: 'varchar', length: 50 })
-  score: string; // e.g. "10", "A+", "8.5/10" – or change to decimal later
+  score: string;
 
-  @ManyToMany(() => Class, (classEntity) => classEntity.participationLists, {
-    cascade: true, // auto-save when saving list
+  @ManyToMany(() => Level, {
+    cascade: true,
+    eager: false,
   })
   @JoinTable({
-    name: 'participation_list_classes',
+    name: 'participation_list_levels',
     joinColumn: {
       name: 'participation_list_id',
       referencedColumnName: 'id',
     },
     inverseJoinColumn: {
-      name: 'class_id',
+      name: 'level_id',
       referencedColumnName: 'id',
     },
   })
-  classes: Class[];
+  levels: Level[];
 
   @Column({ type: 'text', nullable: true })
   description: string;

@@ -15,6 +15,7 @@ import { diskStorage } from 'multer';
 import { extname } from 'path';
 import { CreateStudentDto } from './dto/create-student.dto';
 import { CreateEnrollmentDto } from '../enrollments/dto/create-enrollment.dto';
+import { SearchStudentByClassDto } from './dto/search-students.dto';
 import { StudentsService } from './student.service';
 import { ImageToWebpPipe } from './image-to-webp.pipe';
 
@@ -93,6 +94,13 @@ export class StudentsController {
   @Post(':id/parents')
   linkParents(@Param('id') id: string, @Body('parentIds') parentIds: string[]) {
     return this.service.linkParents(id, parentIds);
+  }
+
+  // ================= BY CLASS =================
+  // POST /students/by-class  ← must be before :id routes
+  @Post('by-class')
+  findByClass(@Body() dto: SearchStudentByClassDto) {
+    return this.service.findByClass(dto);
   }
 
   // ================= ENROLL =================

@@ -31,6 +31,10 @@ export class CreateNotificationDto {
 
   @IsOptional()
   @IsUUID()
+  admin_id?: string;
+
+  @IsOptional()
+  @IsUUID()
   module_id?: string;
 
   @IsOptional()

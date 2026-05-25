@@ -10,7 +10,6 @@ import {
 } from 'typeorm';
 import { YearLevel } from '../year_levels/year-level.entity';
 import { Saving } from '../savings/savings.entity';
-import { ParticipationList } from '../participantion_list/participation_list.entity';
 import { Subject } from '../subjects/subject.entity';
 import { TeacherHomeworkItem } from '../teacher-homework/teacher-homework-item.entity';
 import { TeacherHomework } from '../teacher-homework/teacher-homework.entity';
@@ -44,11 +43,11 @@ export class Class {
 
   @UpdateDateColumn()
   updated_at: Date;
+
   @OneToMany(() => Saving, (saving) => saving.class)
   savings: Saving[];
 
-  @OneToMany(() => ParticipationList, (list) => list.classes)
-  participationLists: ParticipationList[];
+  // ← removed participationLists relation (now lives on Level)
 
   @OneToMany(() => Subject, (subject) => subject.class)
   subjects: Subject[];

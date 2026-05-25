@@ -11,6 +11,7 @@ import { Student } from '../students/student.entity';
 import { Parent } from '../parents/parent.entity';
 import { Branch } from '../branches/branch.entity';
 import { AcademicYear } from '../academic_years/academic-year.entity';
+import { Admin } from '../admins/admin.entity';
 
 @Entity('notifications')
 export class Notification {
@@ -65,6 +66,16 @@ export class Notification {
   @ManyToOne(() => Parent, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'parent_id' })
   parent: Parent;
+
+  // -------------------------
+  // Admin FK (for admin/checker notifications)
+  // -------------------------
+  @Column({ type: 'uuid', nullable: true })
+  admin_id: string;
+
+  @ManyToOne(() => Admin, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'admin_id' })
+  admin: Admin;
 
   // -------------------------
   // Module reference (optional, e.g. task_id)

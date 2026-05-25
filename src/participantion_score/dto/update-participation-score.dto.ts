@@ -1,11 +1,5 @@
-import { ParticipationScoreItemDto } from './create-participation-score.dto';
+// update-participation-score.dto.ts
+import { PartialType } from '@nestjs/mapped-types';
+import { CreateParticipationScoreDto } from './create-participation-score.dto';
 
-export class UpdateParticipationScoreDto {
-  student_id?: string;
-  branchId?: string;
-  academicYearId?: string;
-  classId?: string;
-  date?: string;
-  scores?: ParticipationScoreItemDto[]; // array of scores
-  addedBy?: string;
-}
+export class UpdateParticipationScoreDto extends PartialType(CreateParticipationScoreDto) {}

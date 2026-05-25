@@ -36,7 +36,12 @@ export class CreateAttendanceDto {
   @IsOptional()
   @IsString()
   @MaxLength(255)
-  remark?: string;
+  remark_checkin?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  remark_checkout?: string;
 
   @IsOptional()
   @IsMilitaryTime()

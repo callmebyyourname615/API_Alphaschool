@@ -1,4 +1,11 @@
-import { IsString, IsNotEmpty, IsOptional, IsArray, IsUUID } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsOptional,
+  IsArray,
+  IsUUID,
+  ArrayMinSize,
+} from 'class-validator';
 
 export class CreateParticipationListDto {
   @IsString()
@@ -14,7 +21,7 @@ export class CreateParticipationListDto {
   description?: string;
 
   @IsArray()
-  @IsUUID('all', { each: true })
-  @IsNotEmpty({ message: 'At least one classId is required' })
-  classIds: string[];
+  @ArrayMinSize(1, { message: 'At least one level ID is required' })
+  @IsUUID('4', { each: true, message: 'Each levelId must be a valid UUID' })
+  levelIds: string[];
 }

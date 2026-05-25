@@ -5,6 +5,7 @@ import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import { LoggerService } from './common/logger.service';
 import { LoggingInterceptor } from './common/logging.interceptor';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
@@ -56,10 +57,21 @@ async function bootstrap() {
   // Optional: log all requests/responses
   app.useGlobalInterceptors(new LoggingInterceptor(logger));
 
+  // Swagger
+  const swaggerConfig = new DocumentBuilder()
+    .setTitle('Alpha School API')
+    .setDescription('Alpha School REST API documentation')
+    .setVersion('2.0')
+    .addBearerAuth()
+    .build();
+  const document = SwaggerModule.createDocument(app, swaggerConfig);
+  SwaggerModule.setup(`${prefix}/docs`, app, document);
+
   const port = Number(config.get<string>('PORT') ?? 3000);
 
   await app.listen(port);
   logger.log(`Server running at http://localhost:${port}${prefix}`);
+  logger.log(`Swagger docs at http://localhost:${port}${prefix}/docs`);
 }
 
 bootstrap();

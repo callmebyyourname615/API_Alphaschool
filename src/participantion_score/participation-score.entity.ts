@@ -6,6 +6,14 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+interface ScoreEntry {
+  studentId: string;
+  studentName?: string;  // ← store name to avoid joins when reading history
+  participationId: string;
+  participationName: string;
+  score: number;
+}
+
 @Entity('participation_scores')
 export class ParticipationScore {
   @PrimaryGeneratedColumn('uuid')
@@ -17,18 +25,16 @@ export class ParticipationScore {
   @Column({ type: 'uuid', nullable: true })
   academicYearId: string;
 
-  @Column({ type: 'varchar', nullable: true })
-  classId: string;
+  @Column({ type: 'uuid' })
+  levelId: string;    // ← to know which participation lists were available
+
+  @Column({ type: 'uuid' })
+  classId: string;    // ← to know which class was scored that day
 
   @Column({ type: 'jsonb' })
-  scores: {
-    studentId: string;
-    participationId: string;
-    participationName: string;
-    score: number;
-  }[];
+  scores: ScoreEntry[];
 
-  @Column({ type: 'varchar' })
+  @Column({ type: 'uuid' })
   addedBy: string;
 
   @Column({ type: 'date', nullable: true })

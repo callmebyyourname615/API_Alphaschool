@@ -7,4 +7,5 @@ export class CreateBulkSavingDto {
   transaction_type: SavingTransactionType;
   amount: number;
   note?: string;
+withdraw_reason_id?: string;
 }

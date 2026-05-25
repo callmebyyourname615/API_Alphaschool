@@ -1,13 +1,12 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Between, Repository } from 'typeorm';
+import { Between, DataSource, Repository } from 'typeorm';
 import { ParticipationScore } from './participation-score.entity';
 import { CreateParticipationScoreDto } from './dto/create-participation-score.dto';
 import { UpdateParticipationScoreDto } from './dto/update-participation-score.dto';
 import { ParticipationList } from '../participantion_list/participation_list.entity';
 import { Student } from '../students/student.entity';
 
-/* ================= RESULT TYPE ================= */
 interface ScoreResult {
   studentId: string;
   studentName: string;
@@ -17,7 +16,7 @@ interface ScoreResult {
 }
 
 @Injectable()
-export class ParticipationScoreService {
+export class ParticipationScoreService implements OnModuleInit {
   constructor(
     @InjectRepository(ParticipationScore)
     private readonly repo: Repository<ParticipationScore>,
@@ -27,7 +26,18 @@ export class ParticipationScoreService {
 
     @InjectRepository(ParticipationList)
     private readonly participationRepo: Repository<ParticipationList>,
+
+    private readonly dataSource: DataSource,
   ) {}
+
+  async onModuleInit() {
+    // Ensure levelId column exists on participation_scores
+    // (DB_SYNCHRONIZE=false in this project, so schema changes are manual)
+    await this.dataSource.query(`
+      ALTER TABLE participation_scores
+      ADD COLUMN IF NOT EXISTS "levelId" uuid
+    `);
+  }
 
   /* ================= HELPER ================= */
   private normalizeDate(date: Date | string): Date {
@@ -41,12 +51,13 @@ export class ParticipationScoreService {
     const entity = this.repo.create({
       branchId: dto.branchId,
       academicYearId: dto.academicYearId,
+      levelId: dto.levelId,       // ← added
       classId: dto.classId,
       addedBy: dto.addedBy,
       date: dto.date ? this.normalizeDate(dto.date) : null,
       scores: dto.scores.map((s) => ({
         studentId: s.studentId,
-        participationId: s.id,
+        participationId: s.participationId,
         participationName: s.name,
         score: s.score,
       })),
@@ -57,37 +68,32 @@ export class ParticipationScoreService {
 
   /* ================= GET ALL ================= */
   async findAll() {
-    return this.repo.find({
-      order: { created_at: 'DESC' },
-    });
+    return this.repo.find({ order: { created_at: 'DESC' } });
   }
 
   /* ================= GET BY ID ================= */
   async findOne(id: string) {
     const record = await this.repo.findOne({ where: { id } });
-    if (!record) {
-      throw new NotFoundException('Participation score not found');
-    }
+    if (!record) throw new NotFoundException('Participation score not found');
     return record;
   }
 
   /* ================= UPDATE ================= */
   async update(id: string, dto: UpdateParticipationScoreDto) {
     const record = await this.repo.findOne({ where: { id } });
-    if (!record) {
-      throw new NotFoundException('Participation score not found');
-    }
+    if (!record) throw new NotFoundException('Participation score not found');
 
-    if (dto.branchId) record.branchId = dto.branchId;
+    if (dto.branchId)       record.branchId = dto.branchId;
     if (dto.academicYearId) record.academicYearId = dto.academicYearId;
-    if (dto.classId) record.classId = dto.classId;
-    if (dto.addedBy) record.addedBy = dto.addedBy;
-    if (dto.date) record.date = this.normalizeDate(dto.date);
+    if (dto.levelId)        record.levelId = dto.levelId;   // ← added
+    if (dto.classId)        record.classId = dto.classId;
+    if (dto.addedBy)        record.addedBy = dto.addedBy;
+    if (dto.date)           record.date = this.normalizeDate(dto.date);
 
     if (dto.scores) {
       record.scores = dto.scores.map((s) => ({
         studentId: s.studentId,
-        participationId: s.id,
+        participationId: s.participationId,
         participationName: s.name,
         score: s.score,
       }));
@@ -99,9 +105,7 @@ export class ParticipationScoreService {
   /* ================= DELETE ================= */
   async remove(id: string) {
     const record = await this.repo.findOne({ where: { id } });
-    if (!record) {
-      throw new NotFoundException('Participation score not found');
-    }
+    if (!record) throw new NotFoundException('Participation score not found');
     await this.repo.remove(record);
     return { message: 'Deleted successfully' };
   }
@@ -110,27 +114,23 @@ export class ParticipationScoreService {
   async bulkUpsert(dto: CreateParticipationScoreDto) {
     const targetDate = dto.date ? this.normalizeDate(dto.date) : undefined;
 
-    // หา record ที่มีอยู่แล้ว (class + branch + year + date)
     const existing = await this.repo.findOne({
       where: {
-        classId: dto.classId,
         branchId: dto.branchId,
         academicYearId: dto.academicYearId,
+        levelId: dto.levelId,     // ← added to uniqueness check
+        classId: dto.classId,
         date: targetDate,
       },
     });
 
-    // โหลด participation names จาก DB
-    const participationMap: Record<string, string> = {};
+    // load participation names from DB
     const participationIds = dto.scores.map((s) => s.participationId);
-    const participations =
-      await this.participationRepo.findByIds(participationIds);
-    participations.forEach((p) => {
-      participationMap[p.id] = p.name;
-    });
+    const participations = await this.participationRepo.findByIds(participationIds);
+    const participationMap: Record<string, string> = {};
+    participations.forEach((p) => (participationMap[p.id] = p.name));
 
     if (existing) {
-      // update หรือเพิ่ม score ใหม่
       dto.scores.forEach((s) => {
         const idx = existing.scores.findIndex(
           (sc) =>
@@ -138,16 +138,12 @@ export class ParticipationScoreService {
             sc.participationId === s.participationId,
         );
 
-        const nameFromDB =
-          participationMap[s.participationId] || 'Unknown Activity';
+        const nameFromDB = participationMap[s.participationId] || 'Unknown Activity';
 
         if (idx >= 0) {
-          // update existing
           existing.scores[idx].score = s.score;
-          existing.scores[idx].participationId = s.participationId;
           existing.scores[idx].participationName = nameFromDB;
         } else {
-          // เพิ่ม score ใหม่
           existing.scores.push({
             studentId: s.studentId,
             participationId: s.participationId,
@@ -160,18 +156,17 @@ export class ParticipationScoreService {
       return this.repo.save(existing);
     }
 
-    // ถ้าไม่มี record เดิม สร้างใหม่
     const entity = this.repo.create({
       branchId: dto.branchId,
       academicYearId: dto.academicYearId,
+      levelId: dto.levelId,       // ← added
       classId: dto.classId,
       addedBy: dto.addedBy,
       date: targetDate,
       scores: dto.scores.map((s) => ({
         studentId: s.studentId,
         participationId: s.participationId,
-        participationName:
-          participationMap[s.participationId] || 'Unknown Activity',
+        participationName: participationMap[s.participationId] || 'Unknown Activity',
         score: s.score,
       })),
     });
@@ -183,13 +178,12 @@ export class ParticipationScoreService {
   async getScoresByFilter(filter: {
     branchId: string;
     academicYearId: string;
+    levelId: string;              // ← added
     classId: string;
     date: Date;
   }): Promise<ScoreResult[]> {
-    // ครอบทั้งวัน
     const startOfDay = new Date(filter.date);
     startOfDay.setHours(0, 0, 0, 0);
-
     const endOfDay = new Date(filter.date);
     endOfDay.setHours(23, 59, 59, 999);
 
@@ -197,35 +191,38 @@ export class ParticipationScoreService {
       where: {
         branchId: filter.branchId,
         academicYearId: filter.academicYearId,
+        levelId: filter.levelId,  // ← added
         classId: filter.classId,
-        date: Between(startOfDay, endOfDay), // ✅
+        date: Between(startOfDay, endOfDay),
       },
     });
-    console.log('scoreRecord', scoreRecord);
 
+    // students in the selected class
     const students = await this.studentRepo.find({
       where: { enrollments: { class: { id: filter.classId } } },
       select: ['id', 'first_name', 'last_name'],
       order: { first_name: 'ASC', last_name: 'ASC' },
     });
 
-    const activities = await this.participationRepo.find({
-      select: ['id', 'name'],
-    });
+    // participation lists that belong to the selected level only ← key fix
+    const activities = await this.participationRepo
+      .createQueryBuilder('list')
+      .innerJoin('list.levels', 'level')
+      .where('level.id = :levelId', { levelId: filter.levelId })
+      .select(['list.id', 'list.name'])
+      .getMany();
 
     const result: ScoreResult[] = [];
 
     for (const student of students) {
       for (const activity of activities) {
         const existing = scoreRecord?.scores?.find(
-          (s) =>
-            s.studentId === student.id && s.participationId === activity.id,
+          (s) => s.studentId === student.id && s.participationId === activity.id,
         );
 
         result.push({
           studentId: student.id,
-          studentName:
-            `${student.first_name || ''} ${student.last_name || ''}`.trim(),
+          studentName: `${student.first_name || ''} ${student.last_name || ''}`.trim(),
           participationId: activity.id,
           participationName: activity.name || 'Unknown',
           score: existing?.score ?? 0,

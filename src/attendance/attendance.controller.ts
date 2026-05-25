@@ -1,80 +1,84 @@
+// src/attendance/attendance.controller.ts
+
 import {
-  Body,
   Controller,
-  Delete,
-  Get,
-  Param,
-  ParseUUIDPipe,
-  Patch,
   Post,
+  Get,
+  Put,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  Query,
 } from '@nestjs/common';
-import { AttendancesService } from './attendance.service';
-import { CreateAttendanceDto } from './dto/create-attendance.dto';
-import { UpdateAttendanceDto } from './dto/update-attendance.dto';
-import { ScanQrDto } from './dto/scan-qr.dto';
-import { GetStudentsByDateRangeDto } from './dto/get-students-by-date-range.dto';
+import { ApiTags, ApiOperation, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
+import { AttendanceService } from './attendance.service';
+
+@ApiTags('Attendances')
+@ApiBearerAuth()
 
 @Controller('attendances')
-export class AttendancesController {
-  constructor(private readonly attendancesService: AttendancesService) {}
-
-  @Post()
-  create(@Body() createAttendanceDto: CreateAttendanceDto) {
-    return this.attendancesService.create(createAttendanceDto);
-  }
+export class AttendanceController {
+  constructor(private service: AttendanceService) {}
 
   @Post('scan')
-  scanQr(@Body() scanQrDto: ScanQrDto) {
-    return this.attendancesService.scanQr(scanQrDto);
+  @ApiOperation({ summary: 'QR scan check-in' })
+  scan(@Body() dto: any) {
+    return this.service.scan(dto);
   }
 
-  @Post('auto-absent/run')
-  runAutoAbsentNow() {
-    return this.attendancesService.runAutoAbsentNow();
+  @Post('checkout')
+  @ApiOperation({ summary: 'QR scan check-out' })
+  checkout(@Body() dto: any) {
+    return this.service.checkout(dto);
+  }
+
+  @Post('auto-absent')
+  @ApiOperation({ summary: 'Mark all students absent for a given date' })
+  autoAbsent(@Body() dto: { date: string }) {
+    return this.service.markAbsent(dto.date);
+  }
+
+  @Post()
+  @ApiOperation({ summary: 'Create attendance record manually' })
+  create(@Body() dto: any) {
+    return this.service.create(dto);
   }
 
   @Get()
-  findAll() {
-    return this.attendancesService.findAll();
-  }
-
-  @Get('today/status')
-  getTodayStudentStatuses() {
-    return this.attendancesService.getTodayStudentStatuses();
-  }
-
-  @Get('classes/:classId/students')
-  getStudentsByClass(@Param('classId', new ParseUUIDPipe()) classId: string) {
-    return this.attendancesService.getStudentsByClass(classId);
+  @ApiOperation({ summary: 'Get all attendance records' })
+  @ApiQuery({ name: 'start_date', required: false, example: '2026-05-16' })
+  @ApiQuery({ name: 'end_date', required: false, example: '2026-05-16' })
+  @ApiQuery({ name: 'class_id', required: false })
+  findAll(
+    @Query('start_date') startDate?: string,
+    @Query('end_date') endDate?: string,
+    @Query('class_id') classId?: string,
+  ) {
+    return this.service.findAll({ startDate, endDate, classId });
   }
 
   @Get(':id')
-  findOne(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.attendancesService.findOne(id);
+  @ApiOperation({ summary: 'Get attendance record by ID' })
+  findOne(@Param('id') id: string) {
+    return this.service.findOne(id);
   }
 
-  @Post('classes/all-students')
-  getAllStudentsByClassByPost(
-    @Body('classid', new ParseUUIDPipe()) classid: string,
-  ) {
-    return this.attendancesService.getAllStudentsByClass(classid);
-  }
-
-  @Post('students/date-range')
-  getStudentsByDateRange(@Body() body: GetStudentsByDateRangeDto) {
-    return this.attendancesService.getStudentsByDateRange(body);
+  @Put(':id')
+  @ApiOperation({ summary: 'Update attendance record (PUT)' })
+  update(@Param('id') id: string, @Body() dto: any) {
+    return this.service.update(id, dto);
   }
 
   @Patch(':id')
-  update(
-    @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() updateAttendanceDto: UpdateAttendanceDto,
-  ) {
-    return this.attendancesService.update(id, updateAttendanceDto);
+  @ApiOperation({ summary: 'Update attendance record (PATCH)' })
+  patch(@Param('id') id: string, @Body() dto: any) {
+    return this.service.update(id, dto);
   }
 
   @Delete(':id')
-  remove(@Param('id', new ParseUUIDPipe()) id: string) {
-    return this.attendancesService.remove(id);
+  @ApiOperation({ summary: 'Delete attendance record' })
+  remove(@Param('id') id: string) {
+    return this.service.remove(id);
   }
 }

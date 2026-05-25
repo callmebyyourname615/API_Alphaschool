@@ -29,9 +29,9 @@ export class ParticipationListController {
     return this.service.findAll();
   }
 
-  @Get('class/:classId')
-  findByClass(@Param('classId', ParseUUIDPipe) classId: string) {
-    return this.service.findByClassId(classId);
+  @Get('level/:levelId')                                        // ← was class/:classId
+  findByLevel(@Param('levelId', ParseUUIDPipe) levelId: string) {
+    return this.service.findByLevelId(levelId);
   }
 
   @Get(':id')

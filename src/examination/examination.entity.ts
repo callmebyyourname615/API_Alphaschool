@@ -11,6 +11,8 @@ import { AcademicYear } from '../academic_years/academic-year.entity';
 import { Class } from '../classes/class.entity';
 import { Branch } from '../branches/branch.entity';
 import { Subject } from '../subjects/subject.entity';
+import { Role } from '../roles/role.entity';
+import { Admin } from '../admins/admin.entity';
 
 @Entity('examinations')
 export class Examination {
@@ -93,11 +95,53 @@ export class Examination {
   @Column({ default: false, name: 'is_deleted' })
   isDeleted: boolean;
 
+  @Column({ type: 'uuid', nullable: true, name: 'created_by_id' })
+  createdById: string | null;
+
+  @ManyToOne(() => Admin, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'created_by_id' })
+  createdBy: Admin | null;
+
+  // =========================
+  // CHECKER / LOCK FIELDS
+  // =========================
+  @Column({ type: 'uuid', nullable: true, name: 'checker_id' })
+  checkerId: string | null;
+
+  @ManyToOne(() => Admin, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'checker_id' })
+  checker: Admin | null;
+
+  @Column({ type: 'uuid', nullable: true, name: 'super_admin_role_id' })
+  superAdminRoleId: string | null;
+
+  @ManyToOne(() => Role, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'super_admin_role_id' })
+  superAdminRole: Role | null;
+
+  @Column({ type: 'varchar', length: 20, nullable: true, name: 'checker_status', default: 'PENDING' })
+  checkerStatus: 'PENDING' | 'CHECKED' | 'REJECTED' | null;
+
+  @Column({ type: 'text', nullable: true, name: 'checker_reject_comment' })
+  checkerRejectComment: string | null;
+
+  @Column({ type: 'varchar', length: 20, nullable: true, name: 'super_admin_status', default: 'PENDING' })
+  superAdminStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | null;
+
+  @Column({ type: 'text', nullable: true, name: 'super_admin_reject_comment' })
+  superAdminRejectComment: string | null;
+
+  @Column({ type: 'timestamptz', nullable: true, name: 'locked_until' })
+  lockedUntil: Date | null;
+
   // =========================
   // FILE FIELDS
   // =========================
   @Column({ type: 'varchar', length: 255, nullable: true, name: 'exam_file' })
   examFile: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true, name: 'answer_file' })
+  answerFile: string | null;
 
   // =========================
   // TIMESTAMPS

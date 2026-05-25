@@ -29,12 +29,27 @@ export class CreateAppointmentPersonDto {
 
   @IsString()
   @IsNotEmpty()
-  @IsIn(['Student', 'Parent', 'Teacher', 'Staff', 'Other']) // adjust as needed
+  @IsIn([
+    'PARENT',
+    'TEACHER',
+    'ADMIN',
+    'SUPER_ADMIN',
+    'SUPER_SUPER_ADMIN',
+    'Student',
+    'Parent',
+    'Teacher',
+    'Staff',
+    'Other',
+  ])
   person_type: string;
 
   @IsOptional()
   @IsString()
   @IsIn([
+    'PENDING',
+    'ACCEPTED',
+    'DECLINED',
+    'RESCHEDULED',
     'Pending',
     'Accepted',
     'Declined',

@@ -24,7 +24,7 @@ import { EventActivityModule } from './eventactivity/eventActivity.module';
 import { FileModule } from './file/file.module';
 import { ParticipationScoreModule } from './participantion_score/participation-score.module';
 import { ParticipationListModule } from './participantion_list/participation_list.module';
-import { AttendancesModule } from './attendance/attendance.module';
+import { AttendanceModule } from './attendance/attendance.module';
 import { SavingsModule } from './savings/saving.module';
 import { StudentModule } from './students/student.module';
 import { ServeStaticModule } from '@nestjs/serve-static';
@@ -47,6 +47,8 @@ import { ExaminationResultModule } from './examination_results/examination-resul
 import { TimetableModule } from './timetables/timetable.module';
 import { PayReceiveModule } from './pay_receivce/pay-receive.module';
 import { LeaveReasonModule } from './leave_reason/leave-reason.module';
+import { AttendanceRuleModule } from './attendance/attendance-rule.module';
+import { HomeworkResultModule } from './homework-result/homework-result.module';
 
 @Module({
   imports: [
@@ -67,7 +69,7 @@ import { LeaveReasonModule } from './leave_reason/leave-reason.module';
         password: config.get<string>('DB_PASS'),
         database: config.get<string>('DB_NAME'),
         autoLoadEntities: true,
-        synchronize: true,
+        synchronize: config.get<string>('DB_SYNCHRONIZE') === 'true',
         connectTimeoutMS: 5000,
         extra: {
           connectionTimeoutMillis: 5000,
@@ -100,7 +102,7 @@ import { LeaveReasonModule } from './leave_reason/leave-reason.module';
     ParticipationListModule,
     ParticipationScoreModule,
     SavingsModule,
-    AttendancesModule,
+    AttendanceModule,
     StudentModule,
     AnnouncementsModule,
     EvaluationModule,
@@ -120,6 +122,8 @@ import { LeaveReasonModule } from './leave_reason/leave-reason.module';
     TimetableModule,
     PayReceiveModule,
     LeaveReasonModule,
+    AttendanceRuleModule,
+    HomeworkResultModule,
   ],
   providers: [],
   

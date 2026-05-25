@@ -1,92 +1,99 @@
+// ============================================================
+// FILE: src/appointment/appointment.entity.ts
+// ============================================================
 import {
   Entity,
+  PrimaryGeneratedColumn,
   Column,
-  PrimaryColumn,
   ManyToOne,
-  JoinColumn,
   OneToMany,
+  JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
 } from 'typeorm';
-import { AppointmentPerson } from '../appointment-person/appointment-person.entity';
-import { Branch } from '../branches/branch.entity';
-import { AcademicYear } from '../academic_years/academic-year.entity';
+import { Branch }                 from '../branches/branch.entity';
+import { AcademicYear }           from '../academic_years/academic-year.entity';
+import { AppointmentStatus, CreatorRole } from './appointment.enum';
+import { AppointmentParticipant } from './dto/appointment-participant.entity';
 
 @Entity('appointments')
 export class Appointment {
-  @PrimaryColumn()
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  // -----------------------------
-  // Foreign Key: branch_id → branches.id
-  // -----------------------------
- @Column({ type: 'uuid' })
-branch_id: string;
+  @Column({ name: 'auditor_id', type: 'varchar', nullable: true })
+  created_by?: string | null;
 
-  @ManyToOne(() => Branch, (branch) => branch.appointments, {
-    onDelete: 'CASCADE',
+  @Column({
+    type: 'varchar',
+    nullable: true,
+    select: false,
+    insert: false,
+    update: false,
   })
-  @JoinColumn({ name: 'branch_id' })
-  branch: Branch;
+  creator_role?: CreatorRole | null;
 
-  // -----------------------------
-  // Foreign Key: academic_year_id → academic_years.id
-  // -----------------------------
-  @Column()
+  @Column({ type: 'uuid', nullable: true })
+  branch_id: string;
+
+  @ManyToOne(() => Branch, { onDelete: 'CASCADE', nullable: true })
+  @JoinColumn({ name: 'branch_id' })
+  branch?: Branch;
+
+  @Column({ type: 'uuid', nullable: true })
   academic_year_id: string;
 
-  @ManyToOne(() => AcademicYear, (ay) => ay.appointments, {
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(() => AcademicYear, { onDelete: 'CASCADE', nullable: true })
   @JoinColumn({ name: 'academic_year_id' })
-  academicYear: AcademicYear;
+  academicYear?: AcademicYear;
 
-  // -----------------------------
-  // Other columns
-  // -----------------------------
-  @Column()
+  @Column({ type: 'varchar', length: 255, nullable: true })
   title: string;
 
-  @Column({ type: 'text' })
+  @Column({ type: 'text', nullable: true })
   description: string;
 
-  @Column()
+  @Column({ type: 'varchar', length: 255, nullable: true })
   appointment_place: string;
 
-  @Column({ type: 'date' })
+  @Column({ type: 'date', nullable: true })
   date: Date;
 
-  @Column({ type: 'time' })
-  from_time: string;
+  @Column({ type: 'time', nullable: true })
+  from_time?: string;
 
-  @Column({ type: 'time' })
-  to_time: string;
+  @Column({ type: 'time', nullable: true })
+  to_time?: string;
 
   @Column({ type: 'date', nullable: true })
-  rescheduled_date: Date;
+  rescheduled_date?: Date;
 
   @Column({ type: 'time', nullable: true })
-  rescheduled_from_time: string;
+  rescheduled_from_time?: string;
 
   @Column({ type: 'time', nullable: true })
-  rescheduled_to_time: string;
+  rescheduled_to_time?: string;
 
-  @Column()
-  auditor_id: string;
+  @Column({
+    type: 'enum',
+    enum: AppointmentStatus,
+    default: AppointmentStatus.SCHEDULED,
+  })
+  status: AppointmentStatus;
 
-  @Column()
-  status: string;
-
-  @Column({ default: true })
+  @Column({ type: 'boolean', default: true })
   is_active: boolean;
 
-  @Column({ default: false })
+  @Column({ type: 'boolean', default: false })
   is_deleted: boolean;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @UpdateDateColumn({ type: 'timestamp' })
   updated_at: Date;
 
-  @OneToMany(() => AppointmentPerson, (ap) => ap.appointment)
-  appointmentPersons: AppointmentPerson[];
+  // ✅ Fixed: correct import path, no circular dependency issue
+  @OneToMany(() => AppointmentParticipant, (p) => p.appointment, { cascade: true })
+  participants?: AppointmentParticipant[];
 }

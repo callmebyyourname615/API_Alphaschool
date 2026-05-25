@@ -3,6 +3,7 @@ import {
   Post,
   Get,
   Put,
+  Patch,
   Delete,
   Param,
   Body,
@@ -46,10 +47,13 @@ const fileInterceptorOptions = {
   },
 };
 
-async function compressUploadedPdfs(
-  files: { exam_file?: Express.Multer.File[] },
-): Promise<void> {
-  const allFiles = [...(files.exam_file ?? [])];
+type UploadedExamFiles = {
+  exam_file?: Express.Multer.File[];
+  answer_file?: Express.Multer.File[];
+};
+
+async function compressUploadedPdfs(files: UploadedExamFiles): Promise<void> {
+  const allFiles = [...(files.exam_file ?? []), ...(files.answer_file ?? [])];
   for (const file of allFiles) {
     if (file.mimetype === 'application/pdf') {
       await compressPdf(file.path);
@@ -64,13 +68,13 @@ export class ExaminationController {
   @Post()
   @UseInterceptors(
     FileFieldsInterceptor(
-      [{ name: 'exam_file', maxCount: 1 }],
+      [{ name: 'exam_file', maxCount: 1 }, { name: 'answer_file', maxCount: 1 }],
       fileInterceptorOptions,
     ),
   )
   async create(
     @Body() dto: CreateExaminationDto,
-    @UploadedFiles() files: { exam_file?: Express.Multer.File[] },
+    @UploadedFiles() files: UploadedExamFiles,
   ) {
     await compressUploadedPdfs(files ?? {});
     return this.service.create(dto, files ?? {});
@@ -89,17 +93,32 @@ export class ExaminationController {
   @Put(':id')
   @UseInterceptors(
     FileFieldsInterceptor(
-      [{ name: 'exam_file', maxCount: 1 }],
+      [{ name: 'exam_file', maxCount: 1 }, { name: 'answer_file', maxCount: 1 }],
       fileInterceptorOptions,
     ),
   )
   async update(
     @Param('id') id: string,
     @Body() dto: UpdateExaminationDto,
-    @UploadedFiles() files: { exam_file?: Express.Multer.File[] },
+    @UploadedFiles() files: UploadedExamFiles,
   ) {
     await compressUploadedPdfs(files ?? {});
     return this.service.update(id, dto, files ?? {});
+  }
+
+  @Patch(':id/approve')
+  approve(@Param('id') id: string) {
+    return this.service.approve(id);
+  }
+
+  @Patch(':id/check')
+  check(@Param('id') id: string) {
+    return this.service.check(id);
+  }
+
+  @Patch(':id/reject')
+  reject(@Param('id') id: string, @Body() body: { comment?: string }) {
+    return this.service.reject(id, body?.comment);
   }
 
   @Delete(':id')

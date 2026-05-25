@@ -41,4 +41,8 @@ export class CreateSavingDto {
   @IsOptional()
   @IsString()
   note?: string;
+
+  @IsOptional()
+  @IsUUID()
+  withdraw_reason_id?: string;
 }

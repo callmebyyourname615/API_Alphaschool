@@ -1,22 +1,24 @@
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { Appointment } from './appointment.entity';
-import { AppointmentService } from './appointment.service';
-import { AppointmentController } from './appointment.controller';
-import { AppointmentPerson } from '../appointment-person/appointment-person.entity';
-import { Branch } from '../branches/branch.entity';
-import { AcademicYear } from '../academic_years/academic-year.entity';
+// src/appointment/appointment.module.ts
+import { Module }            from '@nestjs/common';
+import { TypeOrmModule }     from '@nestjs/typeorm';
+import { Appointment }       from './appointment.entity';
+import { Branch }            from '../branches/branch.entity';
+import { AcademicYear }      from '../academic_years/academic-year.entity';
+import { AppointmentService }     from './appointment.service';
+import { AppointmentController }  from './appointment.controller';
+import { AppointmentParticipant } from './dto/appointment-participant.entity';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       Appointment,
+      AppointmentParticipant,
       Branch,
       AcademicYear,
-      AppointmentPerson, // ✅ Add this
     ]),
   ],
-  providers: [AppointmentService],
   controllers: [AppointmentController],
+  providers:   [AppointmentService],
+  exports:     [AppointmentService],
 })
 export class AppointmentModule {}

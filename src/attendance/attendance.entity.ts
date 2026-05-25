@@ -14,6 +14,7 @@ import { Admin } from '../admins/admin.entity';
 export enum AttendanceType {
   PRESENT = 'PRESENT',
   ABSENT = 'ABSENT',
+  LATE = 'LATE',
 }
 
 export enum ScanMethod {
@@ -67,7 +68,10 @@ export class Attendance {
   reason?: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-  remark?: string;
+  remark?: string; // check-in status: EARLY | ON_TIME | LATE | AUTO ABSENT
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  check_out_remark?: string; // checkout status: EARLY_CHECKOUT | ON_TIME | LATE_CHECKOUT
 
   @Column({ type: 'time', nullable: true })
   check_in?: string;

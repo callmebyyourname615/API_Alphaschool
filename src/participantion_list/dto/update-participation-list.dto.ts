@@ -6,5 +6,5 @@ export class UpdateParticipationListDto extends PartialType(CreateParticipationL
   @IsOptional()
   @IsArray()
   @IsUUID('all', { each: true })
-  classIds?: string[];
+  levelIds?: string[];
 }
